@@ -492,6 +492,8 @@ export function CashflowPanel({
 }) {
   const buffer = household.income - household.fixed - household.mortgage;
   const dsr = household.income > 0 ? household.mortgage / household.income : 0;
+  const debtToIncome =
+    household.income > 0 ? household.debt / (household.income * 12) : 0;
   const months =
     household.fixed + household.mortgage > 0
       ? household.liquid / (household.fixed + household.mortgage)
@@ -534,8 +536,12 @@ export function CashflowPanel({
           <b className="num">{money(buffer)}</b>
         </div>
         <div>
-          <span>负债率</span>
+          <span>月供收入比</span>
           <b className="num">{pct(dsr)}</b>
+        </div>
+        <div>
+          <span>负债 / 年收入</span>
+          <b className="num">{debtToIncome.toFixed(1)}×</b>
         </div>
         <div>
           <span>缓冲月数</span>

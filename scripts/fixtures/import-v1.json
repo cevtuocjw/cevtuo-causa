@@ -1,0 +1,40 @@
+{
+  "chains": [
+    {
+      "id": "imported-chain",
+      "title": "导入的链",
+      "event": "导入事件",
+      "mechanism": ["导入传导"],
+      "variable": "导入变量",
+      "projection": "导入投影",
+      "counterfactual": "如果导入指标反向，则不成立",
+      "confidence": 0.7,
+      "opened": "2026-11-01",
+      "due": "2026-12-02",
+      "status": "due",
+      "signposts": [
+        {
+          "id": "s1",
+          "label": "导入指标",
+          "value": "1.0",
+          "target": "≥ 0.5",
+          "state": "on-track",
+          "source": "导入来源",
+          "at": "2026-11-10"
+        }
+      ],
+      "sources": [{ "name": "导入来源", "state": "ok", "at": "2026-11-10" }],
+      "impacts": [1, 0, 0, 0]
+    }
+  ],
+  "records": [],
+  "activeId": "imported-chain",
+  "household": {
+    "income": 28000,
+    "fixed": 9400,
+    "mortgage": 11200,
+    "liquid": 86000,
+    "debt": 1260000,
+    "dependents": 2
+  }
+}

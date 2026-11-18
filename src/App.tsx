@@ -70,7 +70,8 @@ import {
   eligibleRecords,
   hitRate,
 } from "./core/stats";
-import { migrateV1 } from "./core/migrate";
+import { migrateV1, parseStateJson } from "./core/migrate";
+import { projectExposure } from "./core/exposure";
 import { addDays, formatDateOnly } from "./core/time";
 import { demoState } from "./data/demo";
 import { toChainView } from "./lib/chain-view";
@@ -126,6 +127,21 @@ function useScramble(value: number, nonce = 0): string {
   return text;
 }
 
+const EXPOSURE_LABEL: Record<
+  NonNullable<CoreChain["exposure"]>["target"],
+  string
+> = {
+  income: "月收入",
+  fixed: "固定支出",
+  mortgage: "房贷",
+  liquid: "流动现金",
+  debt: "总负债",
+};
+
+function money(n: number): string {
+  return Math.round(n).toLocaleString("en-US");
+}
+
 /** 仅 dev 构建可用的测试时钟；生产包忽略。 */
 function bootNow(): Date {
   if (import.meta.env.DEV) {
@@ -149,6 +165,7 @@ export default function App() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [firstRun, setFirstRun] = useState(false);
+  const [statsWindow, setStatsWindow] = useState<"all" | "90d">("all");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteSeed, setPaletteSeed] = useState<string | undefined>();
   const [toast, setToast] = useState<{
@@ -173,7 +190,13 @@ export default function App() {
     id: string;
     outcome?: Outcome;
   } | null>(null);
+  const [importPreview, setImportPreview] = useState<{
+    state: StateV2;
+    warnings: string[];
+    name: string;
+  } | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const importRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const t = window.setInterval(() => setNow(new Date()), 60_000);
@@ -186,8 +209,13 @@ export default function App() {
     [state.chains, now],
   );
   const statsOptions = useMemo(
-    () => ({ includeSeed: state.settings.showSeedInStats }),
-    [state.settings.showSeedInStats],
+    () => ({
+      includeSeed: state.settings.showSeedInStats,
+      ...(statsWindow === "90d"
+        ? { since: new Date(now.getTime() - 90 * 86_400_000) }
+        : {}),
+    }),
+    [state.settings.showSeedInStats, statsWindow, now],
   );
   const statRecords = useMemo(
     () => eligibleRecords(state.records, statsOptions),
@@ -213,6 +241,7 @@ export default function App() {
   const topScore = Math.max(0, ...live.map(priorityScore));
   const confidenceText = useScramble(active?.confidence ?? 0, refreshNonce);
   const dueDays = activeCore ? daysUntilDue(activeCore, now) : 0;
+  const exposure = activeCore ? projectExposure(activeCore, household) : null;
   const rateText = rate == null ? "—" : pct(rate, 1);
   const brierText = brier == null ? "—" : brier.toFixed(3);
   const eceText = eceValue == null ? "—" : eceValue.toFixed(3);
@@ -588,6 +617,37 @@ export default function App() {
     setEditorOpen(true);
   }
 
+  async function chooseImport(file: File) {
+    try {
+      const text = await file.text();
+      const parsed = parseStateJson(text, now);
+      setImportPreview({ ...parsed, name: file.name });
+    } catch (err) {
+      setToast({ message: `导入失败：${String(err)}` });
+    }
+  }
+
+  async function confirmImport() {
+    if (!importPreview) return;
+    try {
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      // 先备份当前账本；备份失败就不覆盖。
+      await saveExport(
+        `cevtuo-causa-backup-${stamp}.json`,
+        JSON.stringify(state),
+      );
+      setState(importPreview.state);
+      setToast({
+        message: `已从 ${importPreview.name} 恢复；原账本已备份到下载目录。`,
+      });
+      void appendAudit("import_state", importPreview.name);
+      setImportPreview(null);
+      setSettingsOpen(false);
+    } catch (err) {
+      setToast({ message: `恢复失败：${String(err)}` });
+    }
+  }
+
   function registerDraft() {
     const id = "draft-eu-wages";
     if (state.chains.some((c) => c.id === id)) {
@@ -795,6 +855,32 @@ export default function App() {
                           </div>
 
                           <QuantStrip chain={active} />
+                          {exposure ? (
+                            <div className="exposure-line">
+                              <span>若成立</span>
+                              <b>
+                                {EXPOSURE_LABEL[exposure.target]}{" "}
+                                {exposure.deltaPct > 0 ? "+" : ""}
+                                {exposure.deltaPct}%
+                              </b>
+                              <span>
+                                月缓冲 {money(exposure.before.buffer)} →{" "}
+                                {money(exposure.after.buffer)}
+                              </span>
+                              <span>
+                                缓冲 {exposure.before.bufferMonths.toFixed(1)} →{" "}
+                                {exposure.after.bufferMonths.toFixed(1)} 个月
+                              </span>
+                            </div>
+                          ) : activeCore ? (
+                            <button
+                              type="button"
+                              className="exposure-line muted"
+                              onClick={openEditChain}
+                            >
+                              未设家庭暴露 · 设置后这里会显示对月缓冲的影响
+                            </button>
+                          ) : null}
                           <ChainGraph chain={active} />
                           <div className="charts-row">
                             <FactorWaterfall chain={active} />
@@ -940,11 +1026,32 @@ export default function App() {
                       <h2 className="card-title">
                         <Scale size={15} /> 实际命中率 vs 登记置信度
                       </h2>
+                      <span className="seg" role="group" aria-label="统计时间窗">
+                        <button
+                          type="button"
+                          className={statsWindow === "all" ? "active" : ""}
+                          onClick={() => setStatsWindow("all")}
+                        >
+                          全部
+                        </button>
+                        <button
+                          type="button"
+                          className={statsWindow === "90d" ? "active" : ""}
+                          onClick={() => setStatsWindow("90d")}
+                        >
+                          最近 90 天
+                        </button>
+                      </span>
                       <span className="count num">{sampleSize} 条</span>
                     </div>
                     <div className="calib-wrap" style={{ maxWidth: 680 }}>
                       <CalibrationChart buckets={buckets} />
                     </div>
+                    {sampleSize > 0 && sampleSize < 10 ? (
+                      <p className="settle-note" style={{ padding: "0 20px 14px" }}>
+                        样本不足 10 条，曲线只作记录，暂不当作结论。
+                      </p>
+                    ) : null}
                     {sampleSize === 0 && state.records.length > 0 ? (
                       <p className="settle-note" style={{ padding: "0 20px 14px" }}>
                         当前只统计你自己的判定；演示 / 迁移记录未计入。
@@ -1035,6 +1142,18 @@ export default function App() {
           const f = e.target.files?.[0];
           e.target.value = "";
           if (f) void importBill(f);
+        }}
+      />
+
+      <input
+        ref={importRef}
+        type="file"
+        accept=".json,application/json"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          if (f) void chooseImport(f);
         }}
       />
 
@@ -1407,6 +1526,13 @@ export default function App() {
                     <button
                       type="button"
                       className="btn"
+                      onClick={() => importRef.current?.click()}
+                    >
+                      <FileText size={14} /> 导入 JSON
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
                       onClick={() => doExport("json")}
                     >
                       <Download size={14} /> JSON
@@ -1420,6 +1546,77 @@ export default function App() {
                     </button>
                   </>
                 )}
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {importPreview ? (
+          <motion.div
+            className="overlay"
+            role="presentation"
+            onMouseDown={() => setImportPreview(null)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="dialog glass"
+              role="dialog"
+              aria-modal="true"
+              aria-label="确认恢复"
+              onMouseDown={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, y: -6, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+            >
+              <div className="dialog-head">
+                <h2>确认从备份恢复</h2>
+                <span className="pill">明文文件</span>
+              </div>
+              <div className="dialog-rows">
+                <div>
+                  <span>文件</span>
+                  <b>{importPreview.name}</b>
+                </div>
+                <div>
+                  <span>内容</span>
+                  <b>
+                    {importPreview.state.chains.length} 条链 ·{" "}
+                    {importPreview.state.records.length} 条判定记录
+                  </b>
+                </div>
+                <div>
+                  <span>当前数据</span>
+                  <b>覆盖前会自动备份到下载目录</b>
+                </div>
+              </div>
+              {importPreview.warnings.length ? (
+                <ul className="form-error">
+                  {importPreview.warnings.slice(0, 5).map((w) => (
+                    <li key={w}>{w}</li>
+                  ))}
+                </ul>
+              ) : null}
+              <p className="dialog-lead">
+                恢复会替换当前链条、判定记录、家庭数字与设置；审计表保留。
+              </p>
+              <div className="dialog-actions">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setImportPreview(null)}
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => void confirmImport()}
+                >
+                  备份当前并恢复
+                </button>
               </div>
             </motion.div>
           </motion.div>

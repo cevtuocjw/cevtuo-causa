@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { migrateV1 } from "./migrate";
+import { migrateV1, parseStateJson } from "./migrate";
 
 const v1 = {
   chains: [
@@ -100,5 +100,26 @@ describe("migrateV1", () => {
     );
     expect(result.state.chains).toHaveLength(1);
     expect(result.warnings.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("parseStateJson", () => {
+  const now = new Date(2026, 11, 1, 12, 0, 0);
+
+  it("v2 备份可原样恢复", () => {
+    const { state } = migrateV1(v1, now);
+    const again = parseStateJson(JSON.stringify(state), now);
+    expect(again.state).toEqual(state);
+  });
+
+  it("v1 备份会自动迁移", () => {
+    const { state } = parseStateJson(JSON.stringify(v1), now);
+    expect(state.schemaVersion).toBe(2);
+    expect(state.chains[0].origin).toBe("seed");
+  });
+
+  it("坏 JSON 抛错而不是返回空状态", () => {
+    expect(() => parseStateJson("{not json", now)).toThrow(/JSON/);
+    expect(() => parseStateJson("null", now)).toThrow(/对象/);
   });
 });

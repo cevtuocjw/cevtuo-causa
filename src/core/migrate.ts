@@ -269,3 +269,17 @@ export function migrateV1(payload: unknown, now: Date): MigrationResult {
     warnings,
   };
 }
+
+/**
+ * 从备份 JSON 恢复。格式错误必须抛错，由 UI 显示，不得静默重置。
+ * 兼容 v1（0.2 导出）与 v2（0.3 导出）。
+ */
+export function parseStateJson(text: string, now: Date): MigrationResult {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    throw new Error("不是合法的 JSON 文件");
+  }
+  return migrateV1(raw, now);
+}

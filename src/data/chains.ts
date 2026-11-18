@@ -1,5 +1,6 @@
 import { clamp, daysBetween, TODAY } from "../lib/format";
 import { CALIBRATION_BUCKETS, calibration as coreCalibration } from "../core/stats";
+import type { Exposure } from "../core/types";
 
 export type Outcome = "hit" | "miss" | "insufficient";
 export type ChainStatus = "live" | "due" | "settled";
@@ -38,6 +39,7 @@ export interface Chain {
   signposts: Signpost[];
   sources: Source[];
   impacts: [number, number, number, number];
+  exposure?: Exposure;
   outcome?: Outcome;
 }
 
@@ -564,7 +566,10 @@ export function priorityScore(chain: Chain): number {
     chain.impacts.reduce((n, v) => n + Math.abs(v), 0) / 4,
   );
   const urgency = clamp(1 - daysBetween(TODAY, chain.due) / 30, 0, 1);
-  const relevance = 0.8;
+  // 没有家庭暴露时不再假装 0.8 的个人相关度；20% 变化视为满相关。
+  const relevance = chain.exposure
+    ? Math.min(1, Math.abs(chain.exposure.deltaPct) / 20)
+    : 0.3;
   const score =
     100 *
     (0.4 * impact + 0.3 * chain.confidence + 0.2 * urgency + 0.1 * relevance);

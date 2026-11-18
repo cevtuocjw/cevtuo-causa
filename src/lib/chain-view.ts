@@ -26,6 +26,7 @@ export function toChainView(chain: CoreChain, now: Date): ViewChain {
     signposts: chain.signposts,
     sources: chain.sources,
     impacts: chain.impacts,
+    exposure: chain.exposure,
     outcome: chain.outcome,
   };
 }

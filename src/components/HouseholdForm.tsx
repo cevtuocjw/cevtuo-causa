@@ -60,6 +60,11 @@ export function HouseholdForm({
     (Number.isFinite(mortgage) ? mortgage : 0);
   const buffer = (Number.isFinite(income) ? income : 0) - monthlyOut;
   const dsr = Number.isFinite(income) && income > 0 ? mortgage / income : 0;
+  const debt = parsed("debt");
+  const debtToIncome =
+    Number.isFinite(income) && income > 0 && Number.isFinite(debt)
+      ? debt / (income * 12)
+      : 0;
   const months = monthlyOut > 0 && Number.isFinite(liquid) ? liquid / monthlyOut : 0;
 
   function save() {
@@ -102,8 +107,12 @@ export function HouseholdForm({
           <b className="num">{money(buffer)}</b>
         </div>
         <div>
-          <span>负债率</span>
+          <span>月供收入比</span>
           <b className="num">{(dsr * 100).toFixed(0)}%</b>
+        </div>
+        <div>
+          <span>负债 / 年收入</span>
+          <b className="num">{debtToIncome.toFixed(1)}×</b>
         </div>
         <div>
           <span>缓冲月数</span>

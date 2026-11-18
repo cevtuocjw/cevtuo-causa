@@ -4,12 +4,15 @@ export interface StatRecord {
   confidence: number;
   outcome: Outcome;
   origin?: "user" | "seed" | "legacy";
+  settledAt?: string;
   voidedAt?: string;
 }
 
 export interface StatsOptions {
   /** 默认 false：只统计 origin=user。演示与迁移记录必须显式打开。 */
   includeSeed?: boolean;
+  /** 只统计 settledAt 不早于该时间的记录；迁移记录没有时间，会被排除。 */
+  since?: Date;
 }
 
 export interface Bucket {
@@ -47,6 +50,10 @@ export function eligibleRecords(
       return false;
     }
     if (!options.includeSeed && r.origin !== "user") return false;
+    if (options.since) {
+      const at = Date.parse(r.settledAt ?? "");
+      if (!Number.isFinite(at) || at < options.since.getTime()) return false;
+    }
     return true;
   });
 }

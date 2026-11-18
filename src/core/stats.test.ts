@@ -81,3 +81,21 @@ describe("stats 口径", () => {
     expect(integrity).toEqual({ total: 23, bucketed: 23, ok: true });
   });
 });
+
+describe("stats 时间窗", () => {
+  const dated: StatRecord[] = [
+    { confidence: 0.6, outcome: "hit", origin: "user", settledAt: "2026-10-01T00:00:00Z" },
+    { confidence: 0.7, outcome: "miss", origin: "user", settledAt: "2026-11-20T00:00:00Z" },
+    { confidence: 0.8, outcome: "hit", origin: "user" },
+  ];
+
+  it("since 只保留窗口内且有时间的记录", () => {
+    const rows = eligibleRecords(dated, { since: new Date("2026-11-01T00:00:00Z") });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].confidence).toBe(0.7);
+  });
+
+  it("不传 since 时保留全部用户记录", () => {
+    expect(eligibleRecords(dated)).toHaveLength(3);
+  });
+});
