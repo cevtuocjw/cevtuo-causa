@@ -5,7 +5,6 @@ export interface VaultStatus {
   encrypted: boolean;
   key_location: string;
   db_path: string;
-  network_requests: number;
   schema_version: number;
 }
 
@@ -52,6 +51,12 @@ export async function listAudit(limit = 20): Promise<AuditRow[]> {
     console.error("list_audit failed", err);
     return [];
   }
+}
+
+/** 生成加密备份；浏览器预览没有数据库，返回空字符串。 */
+export async function backupDb(label: string): Promise<string> {
+  if (!isDesktop()) return "";
+  return await invoke<string>("backup_db", { label });
 }
 
 export async function clearState(): Promise<void> {

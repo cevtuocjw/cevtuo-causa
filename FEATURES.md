@@ -1,6 +1,6 @@
 # 功能清单与完成度
 
-更新：2026-11-18 · 0.2.0
+更新：2026-11-18 · 0.3.0
 
 图例：**✅ 已实现并验证** · **🟡 部分 / 演示级** · **⛔ 未实现（界面已明确标注）**
 
@@ -55,13 +55,15 @@
 
 | 能力 | 状态 | 验证 |
 |---|---|---|
-| SQLCipher 加密库 | ✅ | `PRAGMA cipher_version`；文件头非 `SQLite format 3` |
+| SQLCipher 加密库 | ✅ | 启动前检查文件头；明文 SQLite 或未链接 SQLCipher 直接拒绝启动 |
 | 密钥存 macOS Keychain | ✅ | `com.cevtuo.causa / db-key` |
-| 退出重开恢复状态 | ✅ | 判定后 7→6，重开仍 6；含家庭 6 数的默认 `save_state 9120`（旧版无 household 时为 9016） |
+| 退出重开恢复状态 | ✅ | v2 state 迁移与恢复；原生实测 `save_state 16074` |
 | 导出 / 导入 JSON / Markdown | ✅ | 导出完整 v2 state；导入前自动备份当前账本；明文警告 |
 | 重置数据 | ✅ | 设置页二次确认；清空链条与判定记录，家庭 6 数与审计保留 |
+| 加密备份 | ✅ | 启动每日自动备份 + 设置页手动备份；`VACUUM INTO`，文件名 `backups/causa-*.db`，保留 7 份 |
+| 渲染错误边界 | ✅ | 白屏改为错误页；不清空数据，可重试 |
 | 审计表写入 | ✅ | chain_create / chain_update / settle / settle_undo / refresh / export / household / reset / demo_load；只记动作，不记录金额；设置页显示最近 12 条 |
-| 加密擦除 / 生物识别解锁 | ⛔ | 未实现；“重置”只是重置，不是 crypto-erase |
+| 加密擦除 / 生物识别解锁 | ⛔ | 未实现；重置不是 crypto-erase |
 | 自动更新 | ⛔ | 未接 Tauri updater |
 
 ## 平台与分发

@@ -51,7 +51,8 @@ cat > "$OUT/RELEASE-NOTES.md" <<NOTES
 - dmg: \`$NAME.dmg\`（如果存在）
 - 校验: \`SHA256SUMS.txt\`
 
-本版新增：家庭 6 数手动校准、支付宝/微信 CSV 估算预填、本地审计表（设置页可见）。
+本版新增：新建/编辑链条、到期结算纪律（反事实优先、必须写理由、10 秒撤销）、
+校准 10 档与 90 天窗口、家庭暴露投影、CSV 逐笔复核、JSON 恢复、加密自动备份。
 数据只在本机：SQLCipher 加密数据库 + macOS Keychain 密钥；应用不发网络请求。
 NOTES
 

@@ -80,6 +80,7 @@ import { decodeBill, parseBillCsv, type BillSummary } from "./lib/bills";
 import { pct } from "./lib/format";
 import {
   appendAudit,
+  backupDb,
   isDesktop,
   listAudit,
   loadState,
@@ -284,6 +285,17 @@ export default function App() {
           setState(emptyState(EMPTY_HOUSEHOLD));
           setFirstRun(true);
         } else {
+          const isV2 =
+            (saved as { schemaVersion?: unknown }).schemaVersion === 2;
+          if (!isV2) {
+            try {
+              await backupDb(`pre-migration-${Date.now()}`);
+            } catch (err) {
+              setToast({
+                message: `迁移前备份失败：${String(err)}。仍继续迁移，请尽快手动导出。`,
+              });
+            }
+          }
           const { state: next, warnings } = migrateV1(saved, new Date());
           setState(next);
           if (warnings.length > 0) {
@@ -293,7 +305,14 @@ export default function App() {
       } catch (err) {
         if (alive) setLoadError(String(err));
       } finally {
-        if (alive) setLoaded(true);
+        if (alive) {
+          setLoaded(true);
+          if (isDesktop()) {
+            void backupDb(`auto-${new Date().toISOString().slice(0, 10)}`).catch(
+              (err) => console.error("auto backup failed", err),
+            );
+          }
+        }
       }
     })();
     return () => {
@@ -486,6 +505,18 @@ export default function App() {
         `¥${adjusted.avgFixed.toLocaleString("en-US")}。` +
         "分类可在复核页改判；账单里没有收入 / 现金 / 负债，请补齐后保存。",
     );
+  }
+
+  async function backupNow() {
+    try {
+      const path = await backupDb(`manual-${Date.now()}`);
+      setToast({
+        message: path ? `已备份：${path}` : "浏览器预览不写本地数据库，无需备份。",
+      });
+      if (path) void appendAudit("backup", path.split("/").pop() ?? "backup");
+    } catch (err) {
+      setToast({ message: `备份失败：${String(err)}` });
+    }
   }
 
   function resetData() {
@@ -1237,9 +1268,7 @@ export default function App() {
                 </div>
                 <div>
                   <span>网络</span>
-                  <b className="num">
-                    {vault?.network_requests ?? 0} 次请求
-                  </b>
+                  <b>{isDesktop() ? "无网络模块" : "浏览器预览"}</b>
                 </div>
                 <div>
                   <span>遥测</span>
@@ -1435,7 +1464,7 @@ export default function App() {
                 <h2>
                   <Settings size={16} /> 设置
                 </h2>
-                <span className="pill">0.3.0-dev</span>
+                <span className="pill">0.3.0</span>
               </div>
               <div className="dialog-rows">
                 <div>
@@ -1536,6 +1565,13 @@ export default function App() {
                       onClick={() => importRef.current?.click()}
                     >
                       <FileText size={14} /> 导入 JSON
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => void backupNow()}
+                    >
+                      <ShieldCheck size={14} /> 立即备份
                     </button>
                     <button
                       type="button"

@@ -67,14 +67,14 @@ npm run build
 - [x] 修正“不计收支”被当成支出的判断（精确匹配 支出 / 收入）
 - [ ] 按类别筛选校准（留在 M4+；当前只按时间窗）
 
-### M4 安全与发布
+### M4 安全与发布 — 完成 2026-11-18
 
-- [ ] 启动校验数据库文件头；SQLCipher 未链接时拒绝启动
-- [ ] Keychain 仅 `NoEntry` 新建密钥，其他错误报错并提供恢复
-- [ ] schema_version 持久化；迁移前强制备份；每日加密备份保留 7 份
-- [ ] 删除硬编码 `network_requests: 0`，改为可核查文案
-- [ ] ErrorBoundary + 恢复页；持久化失败可见
-- [ ] 0.3.0 universal 打包、原生冒烟、文档更新
+- [x] 启动校验数据库文件头；SQLCipher 未链接时拒绝启动
+- [x] Keychain 仅 `NoEntry` 新建密钥，其他错误报错（恢复界面仍需人工处理）
+- [x] 迁移前备份 + 每日加密备份保留 7 份；DB schema 版本仍由 payload `schemaVersion` 承担
+- [x] 删除硬编码 `network_requests`，界面改为“无网络模块”
+- [x] ErrorBoundary + 载入失败恢复页；持久化失败常驻提示
+- [x] 0.3.0 universal 打包、原生冒烟、文档更新
 
 ## 默认决策
 

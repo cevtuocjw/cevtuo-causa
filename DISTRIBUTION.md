@@ -1,6 +1,6 @@
 # 分发：没有 Apple Developer 账号怎么发
 
-更新时间：2026-11-18 · 版本 0.2.0
+更新时间：2026-11-18 · 版本 0.3.0
 
 ## 决定
 
@@ -29,7 +29,7 @@
 
 ### 方式 A：DMG（推荐）
 
-1. 下载 `Cevtuo-Causa-0.2.0-macos-universal.dmg`；
+1. 下载 `Cevtuo-Causa-0.3.0-macos-universal.dmg`；
 2. 打开，把 `Cevtuo Causa` 拖进 `Applications`；
 3. 第一次打开被拦下后：
    - **macOS 15 Sequoia 及更新**：系统设置 → 隐私与安全性 → 拉到底 → “仍要打开”；
@@ -47,7 +47,7 @@
 ### 校验下载
 
 ```bash
-shasum -a 256 Cevtuo-Causa-0.2.0-macos-universal.dmg
+shasum -a 256 Cevtuo-Causa-0.3.0-macos-universal.dmg
 # 与 release 页里的 SHA256SUMS.txt 对照
 ```
 
@@ -76,37 +76,36 @@ bash scripts/release.sh
 产物在 `release/`：
 
 ```
-Cevtuo-Causa-0.2.0-macos-universal.dmg   12,760,165 bytes
-Cevtuo-Causa-0.2.0-macos-universal.zip   12,387,065 bytes
+Cevtuo-Causa-0.3.0-macos-universal.dmg   12,828,458 bytes
+Cevtuo-Causa-0.3.0-macos-universal.zip   12,457,629 bytes
 SHA256SUMS.txt
 ```
 
-### 当前产物的校验和（2026-11-18 15:28 重建）
+### 当前产物的校验和（2026-11-18 16:29 重建）
 
-这一版包含家庭 6 数、支付宝/微信 CSV 估算预填与本地审计表；已在 Apple Silicon 上启动 release 包并实读设置页审计行。
+0.3.0 包含：链条编辑、结算纪律（反事实 / 理由 / 10 秒撤销）、10 档校准与 90 天窗口、
+家庭暴露投影、CSV 逐笔复核、JSON 恢复、加密自动备份、明文库拒绝启动。
+已在 Apple Silicon 上启动 universal release 包，并验证设置页、审计与备份入口。
 
 ```
-0e1b57e1182c41299536c61b31ff42b04c0ae528c82e1e59cde2e4667156a51d  Cevtuo-Causa-0.2.0-macos-universal.zip
-018dbd541458605a313632eb5f63afe593a48f2032163165a8e3c8dd57b75ab4  Cevtuo-Causa-0.2.0-macos-universal.dmg
+eb34797f17f6636e7669e0b2ad6e80ea4710b96902f5596988d777f5272be46a  Cevtuo-Causa-0.3.0-macos-universal.zip
+4552bfc70beca16199f8d3a062e143286a18272be9f3077e3d0ada8eb5ae4a9f  Cevtuo-Causa-0.3.0-macos-universal.dmg
 ```
 
 验证方式：`shasum -a 256 -c SHA256SUMS.txt`（在 `release/` 目录内执行）。
 
-首次上传仓库（本目录目前还不是 git 仓库）：
+仓库已初始化（本地 git，tag `v0.3.0`），尚未配置远程：
 
 ```bash
 cd ~/Documents/Codex/cevtuo-causa
-git init
-git add .
-git commit -m "Cevtuo Causa 0.2.0"
 gh repo create cevtuo-causa --public --source=. --remote=origin --push
 ```
 
 发布到 GitHub：
 
 ```bash
-gh release create v0.2.0 release/* \
-  --title "Cevtuo Causa 0.2.0" \
+gh release create v0.3.0 release/* \
+  --title "Cevtuo Causa 0.3.0" \
   --notes-file release/RELEASE-NOTES.md
 ```
 

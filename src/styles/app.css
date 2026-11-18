@@ -2788,3 +2788,17 @@ h1 {
     font-size: 10px;
   }
 }
+
+.fatal-error {
+  margin-top: 12px;
+  padding: 10px 12px;
+  max-height: 160px;
+  overflow: auto;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #ffb4b4;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: pre-wrap;
+}
