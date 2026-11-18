@@ -91,7 +91,7 @@
 
 **影响等级**：四条坐标绝对值之和 ≥6 为 L5，≥4 为 L4，≥3 为 L3，≥2 为 L2，其余 L1。
 
-**置信度校准**：命中率 `HIT = hit / (hit + miss)`；`Brier = mean((confidence − outcome)²)`；`ECE = Σ (n_b/n) × |hitRate_b − mid_b|`。证据不足不计入 HIT 与 Brier，但计入样本量。当前样本：HIT 65.0%，Brier 0.201，ECE 0.103，n=23。
+**置信度校准**：命中率 `HIT = hit / (hit + miss)`；`Brier = mean((confidence − outcome)²)`；`ECE = Σ (n_b/n) × |hitRate_b − mid_b|`。证据不足不计入 HIT 与 Brier，但计入样本量。0.3 起分桶改为 0–100% 十档（旧版 40–90% 五档会丢掉低置信记录）。当前样本：HIT 65.0%，Brier 0.201，ECE 0.115，n=23。
 
 **覆盖**：至少一个 T1/T2 来源的链占比。**时滞误差**：结算后计算预测时滞与真实时滞的平均绝对误差，首版先留字段，样本足够后展示。**新鲜度**：每个来源的延迟小时数，直接进入来源矩阵。
 

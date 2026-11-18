@@ -1,4 +1,5 @@
 import { clamp, daysBetween, TODAY } from "../lib/format";
+import { CALIBRATION_BUCKETS, calibration as coreCalibration } from "../core/stats";
 
 export type Outcome = "hit" | "miss" | "insufficient";
 export type ChainStatus = "live" | "due" | "settled";
@@ -418,37 +419,15 @@ export function hitRate(records: { outcome: Outcome }[]): number {
   return hit + miss === 0 ? 0 : hit / (hit + miss);
 }
 
-export const calibrationBuckets = [
-  { label: "40–50", min: 0.4, max: 0.5 },
-  { label: "50–60", min: 0.5, max: 0.6 },
-  { label: "60–70", min: 0.6, max: 0.7 },
-  { label: "70–80", min: 0.7, max: 0.8 },
-  { label: "80–90", min: 0.8, max: 0.9 },
-];
-
+/**
+ * 0.3 起分桶交给 `src/core/stats`：覆盖 0–100% 十档。
+ * 0.2 只统计 40–90%，低于 40% 的记录被静默丢弃，而命中率/Brier 又用了全部记录。
+ * 这里保留 includeSeed:true 只是为了 0.2 演示页仍显示完整样本；
+ * 用户自己的账本会走默认的“只算 user”口径。
+ */
 export function calibration(records: { confidence: number; outcome: Outcome }[]) {
-  return calibrationBuckets.map((b) => {
-    const rows = records.filter(
-      (r) => r.confidence >= b.min && r.confidence < b.max,
-    );
-    const decided = rows.filter((r) => r.outcome !== "insufficient");
-    const hits = decided.filter((r) => r.outcome === "hit").length;
-    return {
-      label: b.label,
-      mid: (b.min + b.max) / 2,
-      count: rows.length,
-      decided: decided.length,
-      hitRate: decided.length === 0 ? null : hits / decided.length,
-    };
-  });
+  return coreCalibration(records, { includeSeed: true });
 }
-
-// 断言：分桶计数之和必须等于已结算总数
-const bucketTotal = calibration(initialRecords).reduce((n, b) => n + b.count, 0);
-console.assert(
-  bucketTotal === initialRecords.length,
-  `calibration buckets sum ${bucketTotal} != records ${initialRecords.length}`,
-);
 
 /* ------------------------------------------------------------------ quant */
 
