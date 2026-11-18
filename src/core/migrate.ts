@@ -168,6 +168,7 @@ function toChain(raw: V1Chain, index: number, now: Date, warnings: string[]): Ch
     mechanism,
     variable: asString(raw.variable, "变量未记录"),
     projection: asString(raw.projection, "投影未记录"),
+    summary: asString(raw.summary) || undefined,
     counterfactual: asString(raw.counterfactual),
     confidence: clamp01(raw.confidence),
     openedAt: openedAt < dueAt ? openedAt : formatDateOnly(addDays(now, -1)),
@@ -216,7 +217,26 @@ export function isStateV2(value: unknown): value is StateV2 {
  */
 export function migrateV1(payload: unknown, now: Date): MigrationResult {
   if (isStateV2(payload)) {
-    return { state: payload, warnings: [] };
+    // 0.3 早期开发态可能缺 settings/household；补齐而不覆盖数据。
+    const ids = new Set(payload.chains.map((c) => c.id));
+    return {
+      state: {
+        schemaVersion: 2,
+        chains: payload.chains,
+        records: payload.records,
+        household: toHousehold(payload.household),
+        activeId:
+          typeof payload.activeId === "string" && ids.has(payload.activeId)
+            ? payload.activeId
+            : payload.chains[0]?.id ?? "",
+        settings: {
+          showSeedInStats: Boolean(
+            (payload as Partial<StateV2>).settings?.showSeedInStats,
+          ),
+        },
+      },
+      warnings: [],
+    };
   }
   if (!isRecord(payload)) throw new Error("无法迁移：payload 不是对象");
 

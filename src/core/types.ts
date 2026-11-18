@@ -71,6 +71,8 @@ export interface Chain {
   mechanism: string[];
   variable: string;
   projection: string;
+  /** 可选的一句话机制说明；展示层没有时用 mechanism 拼接。 */
+  summary?: string;
   /** 必填：什么情况下这条链不成立。 */
   counterfactual: string;
   /** 登记时冻结，0..1。 */
@@ -132,6 +134,16 @@ export const DEFAULT_HOUSEHOLD: Household = {
   liquid: 86000,
   debt: 1260000,
   dependents: 2,
+};
+
+/** 新用户从零开始，不预填别人的家庭数字。 */
+export const EMPTY_HOUSEHOLD: Household = {
+  income: 0,
+  fixed: 0,
+  mortgage: 0,
+  liquid: 0,
+  debt: 0,
+  dependents: 0,
 };
 
 export function emptyState(household: Household = DEFAULT_HOUSEHOLD): StateV2 {

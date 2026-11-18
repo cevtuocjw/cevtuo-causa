@@ -13,23 +13,19 @@ export function isDesktop(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
+/**
+ * 读取失败必须冒泡：调用方要显示恢复界面。
+ * 0.2 把错误吞成 null，随后又写入默认值，等于静默覆盖用户的库。
+ */
 export async function loadState<T>(): Promise<T | null> {
   if (!isDesktop()) return null;
-  try {
-    return await invoke<T | null>("load_state");
-  } catch (err) {
-    console.error("load_state failed", err);
-    return null;
-  }
+  return await invoke<T | null>("load_state");
 }
 
+/** 写入失败也必须冒泡，由 UI 显示常驻错误，而不是只写 console。 */
 export async function saveState(state: unknown): Promise<void> {
   if (!isDesktop()) return;
-  try {
-    await invoke("save_state", { state });
-  } catch (err) {
-    console.error("save_state failed", err);
-  }
+  await invoke("save_state", { state });
 }
 
 export interface AuditRow {

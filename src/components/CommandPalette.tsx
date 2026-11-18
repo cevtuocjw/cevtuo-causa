@@ -24,7 +24,7 @@ export function CommandPalette({
   onClose: () => void;
   due: Chain[];
   visible: Chain[];
-  rate: number;
+  rate: number | null;
   recordsCount: number;
   onRegisterDraft: () => void;
 }) {
@@ -73,10 +73,10 @@ export function CommandPalette({
 
     if (q.includes("命中") || q.includes("校准")) {
       setAnswer({
-        text: `90 天命中率 ${pct(
+        text: `命中率 ${rate == null ? "—" : pct(
           rate,
           1,
-        )}，已结算 ${recordsCount} 条。\n证据不足不计入分母，单独保留。`,
+        )}，可判定样本 ${recordsCount} 条。\n证据不足不计入分母，单独保留；演示记录是否计入由设置决定。`,
       });
       return;
     }
@@ -212,7 +212,7 @@ export function CommandPalette({
             <div className="palette-foot">
               <span className="local">
                 <Icon name="lock" size={12} />
-                只读本地账本 · 0 次网络请求
+                只读本地账本 · 无网络模块
               </span>
               <span>Esc 关闭</span>
             </div>

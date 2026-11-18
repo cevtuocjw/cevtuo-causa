@@ -7,9 +7,9 @@
 - **Tauri 2**：窗口 1440×920，最小 1100×720，标识 `com.cevtuo.causa`
 - **SQLCipher**：`rusqlite` 的 `bundled-sqlcipher-vendored-openssl`，AES-256
 - **Keychain**：32 字节随机密钥，服务名 `com.cevtuo.causa`，账户 `db-key`
-- **持久化**：`state` 表保存 `{ chains, records, activeId, household }`，前端 350ms 防抖写回；重启后恢复
+- **持久化**：`state` 表保存 v2 `{ schemaVersion: 2, chains, records, household, activeId, settings }`，前端 350ms 防抖写回；旧 0.2 payload 启动时迁移（自动备份在 0.3 M4 补上）
 - **导出**：`save_export` 把 JSON / Markdown 写入“下载”目录，文件名只允许安全字符；JSON 含家庭 6 数
-- **审计表**：`audit` 记录 settle / refresh / export / household / reset / draft，只记动作与摘要，不记账单内容；设置页显示最近 12 条
+- **审计表**：`audit` 记录 chain_create / chain_update / settle / settle_undo / refresh / export / household / reset / demo_load，只记动作与摘要，不记金额；设置页显示最近 12 条
 - **命令**：`vault_status`、`load_state`、`save_state`、`clear_state`、`save_export`、`append_audit`、`list_audit`
 - **CSP**：`default-src 'self'`，只允许本地资源与 Tauri IPC；无远程字体、无远程图片
 - **零网络**：Rust 侧没有任何 HTTP 客户端，`network_requests` 恒为 0
@@ -39,6 +39,9 @@ open "src-tauri/target/release/bundle/macos/Cevtuo Causa.app"
 
 universal release 包也做过启动烟测：同一数据库、设置页读得到审计行、账本页有「手动校准 6 个数」入口。
 
+0.3 M2 补充：现有 0.2 数据库迁移到 v2 后 `save_state 16074`，7 条演示链保留并标为 seed；
+原生打开「新建链条」编辑器、取消、设置里切换校准口径并重启，均验证通过。
+
 终端直接启动时注意可执行文件名是 crate 名 `cevtuo-causa`（`.app` 目录才叫 `Cevtuo Causa`）：
 
 ```bash
@@ -64,7 +67,7 @@ security find-generic-password -s com.cevtuo.causa -a db-key
 ## 还没做
 
 - macOS 签名与公证：**没有开发者账号，决定不做**；分发走未签名 universal 包，见 `DISTRIBUTION.md`
-- 加密擦除（`reset` 只是重置为默认数据）、生物识别解锁
+- JSON 导入恢复、加密擦除（`reset` 只清空链条与判定记录）、生物识别解锁
 - PDF 账单解析（CSV 已支持支付宝 / 微信导出）
 - Android AAB（Tauri 2 移动目标；需要 Android SDK + NDK）
 - 可重复构建与 SBOM

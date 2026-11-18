@@ -23,6 +23,9 @@ import { CalibrationChart } from "./components/CalibrationChart";
 import { ProjectionMatrix } from "./components/ProjectionMatrix";
 import { CommandPalette } from "./components/CommandPalette";
 import { HouseholdForm } from "./components/HouseholdForm";
+import { ChainEditor } from "./components/ChainEditor";
+import { SettleDialog } from "./components/SettleDialog";
+import { FirstRunDialog } from "./components/FirstRunDialog";
 import { IconRail, TopBar, type View } from "./components/Shell";
 import {
   BriefingStrip,
@@ -36,27 +39,45 @@ import {
   Tip,
 } from "./components/Quant";
 import {
-  brierScore,
-  calibration,
   coverage,
-  ece,
   gradeFor,
-  hitRate,
   impactLevel,
-  initialChains,
-  initialHousehold,
-  initialRecords,
   priorityScore,
   sourceReliability,
-  type Chain,
+  type Chain as ViewChain,
   type Household,
-  type Outcome,
 } from "./data/chains";
+import type {
+  Chain as CoreChain,
+  Outcome,
+  StateV2,
+} from "./core/types";
+import { EMPTY_HOUSEHOLD, emptyState } from "./core/types";
+import { canSettle, daysUntilDue, deriveStatus } from "./core/status";
+import { RuleError, settle, undoSettle } from "./core/settle";
+import {
+  createChain,
+  editChain,
+  resetUserData,
+  setActive,
+  setHousehold as setHouseholdState,
+  setShowSeedInStats,
+} from "./core/commands";
+import {
+  brier as brierOf,
+  calibration,
+  ece as eceOf,
+  eligibleRecords,
+  hitRate,
+} from "./core/stats";
+import { migrateV1 } from "./core/migrate";
+import { addDays, formatDateOnly } from "./core/time";
+import { demoState } from "./data/demo";
+import { toChainView } from "./lib/chain-view";
 import { decodeBill, parseBillCsv } from "./lib/bills";
-import { daysBetween, pct, TODAY } from "./lib/format";
+import { pct } from "./lib/format";
 import {
   appendAudit,
-  clearState,
   isDesktop,
   listAudit,
   loadState,
@@ -67,28 +88,10 @@ import {
   type VaultStatus,
 } from "./lib/desktop";
 
-interface PersistedState {
-  chains: Chain[];
-  records: { confidence: number; outcome: Outcome }[];
-  activeId: string;
-  household?: Household;
-}
-
-function isHousehold(v: unknown): v is Household {
-  if (!v || typeof v !== "object") return false;
-  const o = v as Record<string, unknown>;
-  return (["income", "fixed", "mortgage", "liquid", "debt", "dependents"] as const).every(
-    (k) => typeof o[k] === "number" && Number.isFinite(o[k]) && (o[k] as number) >= 0,
-  );
-}
-
 const VIEW_TITLE: Record<View, string> = {
   ledger: "账本",
   projection: "投影",
   calibration: "校准",
-  aligner: "口径对齐",
-  diffusion: "政策扩散",
-  local: "本地镜像",
 };
 
 function useScramble(value: number, nonce = 0): string {
@@ -123,40 +126,85 @@ function useScramble(value: number, nonce = 0): string {
   return text;
 }
 
+/** 仅 dev 构建可用的测试时钟；生产包忽略。 */
+function bootNow(): Date {
+  if (import.meta.env.DEV) {
+    const globalNow = (globalThis as { __CAUSA_TEST_NOW__?: unknown })
+      .__CAUSA_TEST_NOW__;
+    const fromUrl = new URLSearchParams(window.location.search).get("now");
+    const raw = typeof globalNow === "string" ? globalNow : fromUrl;
+    if (typeof raw === "string") {
+      const d = new Date(raw);
+      if (!Number.isNaN(d.getTime())) return d;
+    }
+  }
+  return new Date();
+}
+
 export default function App() {
   const [view, setView] = useState<View>("ledger");
-  const [chains, setChains] = useState<Chain[]>(initialChains);
-  const [records, setRecords] = useState(initialRecords);
-  const [activeId, setActiveId] = useState(initialChains[0].id);
+  const [now, setNow] = useState(bootNow);
+  const [state, setState] = useState<StateV2>(() => emptyState(EMPTY_HOUSEHOLD));
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [firstRun, setFirstRun] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteSeed, setPaletteSeed] = useState<string | undefined>();
   const [toast, setToast] = useState<{
     message: string;
     undo?: () => void;
+    duration?: number;
   } | null>(null);
   const [vaultOpen, setVaultOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [lastRefresh, setLastRefresh] = useState("09:14");
   const [refreshNonce, setRefreshNonce] = useState(0);
-  const [household, setHousehold] = useState<Household>(initialHousehold);
   const [householdOpen, setHouseholdOpen] = useState(false);
-  const [householdSeed, setHouseholdSeed] = useState<Household>(initialHousehold);
+  const [householdSeed, setHouseholdSeed] = useState<Household>(EMPTY_HOUSEHOLD);
   const [billNote, setBillNote] = useState<string | undefined>();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [auditRows, setAuditRows] = useState<AuditRow[]>([]);
   const [confirmReset, setConfirmReset] = useState(false);
   const [vault, setVault] = useState<VaultStatus | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorSeed, setEditorSeed] = useState<CoreChain | undefined>();
+  const [settleTarget, setSettleTarget] = useState<{
+    id: string;
+    outcome?: Outcome;
+  } | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const hydrated = useRef(false);
 
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(t);
+  }, []);
+
+  const household = state.household;
+  const chains = useMemo(
+    () => state.chains.map((c) => toChainView(c, now)),
+    [state.chains, now],
+  );
+  const statsOptions = useMemo(
+    () => ({ includeSeed: state.settings.showSeedInStats }),
+    [state.settings.showSeedInStats],
+  );
+  const statRecords = useMemo(
+    () => eligibleRecords(state.records, statsOptions),
+    [state.records, statsOptions],
+  );
+  const rate = hitRate(statRecords);
+  const buckets = calibration(state.records, statsOptions);
+  const brier = brierOf(statRecords);
+  const eceValue = eceOf(statRecords);
   const live = chains.filter((c) => c.status !== "settled");
   const due = live.filter((c) => c.status === "due");
   const visible = live;
-  const active = visible.find((c) => c.id === activeId) ?? visible[0];
-  const rate = hitRate(records);
-  const buckets = calibration(records);
-  const brier = brierScore(records);
-  const eceValue = ece(records);
+  const active = visible.find((c) => c.id === state.activeId) ?? visible[0];
+  const activeCore = state.chains.find((c) => c.id === active?.id);
+  const settleChain = settleTarget
+    ? state.chains.find((c) => c.id === settleTarget.id) ?? null
+    : null;
   const cover = coverage(live);
   const reversed = due.reduce(
     (n, c) => n + c.signposts.filter((s) => s.state === "reversed").length,
@@ -164,6 +212,27 @@ export default function App() {
   );
   const topScore = Math.max(0, ...live.map(priorityScore));
   const confidenceText = useScramble(active?.confidence ?? 0, refreshNonce);
+  const dueDays = activeCore ? daysUntilDue(activeCore, now) : 0;
+  const rateText = rate == null ? "—" : pct(rate, 1);
+  const brierText = brier == null ? "—" : brier.toFixed(3);
+  const eceText = eceValue == null ? "—" : eceValue.toFixed(3);
+  const sampleSize = statRecords.length;
+  const settleable = (id: string) => {
+    const chain = state.chains.find((c) => c.id === id);
+    return chain ? canSettle(chain, now) : false;
+  };
+  const queueStatus = (id: string) => {
+    const chain = state.chains.find((c) => c.id === id);
+    if (!chain) return null;
+    const status = deriveStatus(chain, now);
+    return status === "live" || status === "settled" ? null : status;
+  };
+  const overdueChains = state.chains.filter(
+    (c) =>
+      !c.settledAt &&
+      !c.outcome &&
+      deriveStatus(c, now) === "overdue",
+  );
 
   const projectionChains = useMemo(() => {
     const base = active
@@ -172,46 +241,44 @@ export default function App() {
     return base.slice(0, 3);
   }, [active, visible]);
 
-  const recordRows = [...records].slice(-8).reverse();
+  const recordRows = [...statRecords].slice(-8).reverse();
 
   useEffect(() => {
     let alive = true;
-    loadState<PersistedState>().then((saved) => {
-      if (!alive) return;
-      if (
-        saved &&
-        Array.isArray(saved.chains) &&
-        Array.isArray(saved.records)
-      ) {
-        setChains(saved.chains);
-        setRecords(saved.records);
-        if (typeof saved.activeId === "string") setActiveId(saved.activeId);
-        if (isHousehold(saved.household)) {
-          setHousehold(saved.household);
-          setHouseholdSeed(saved.household);
+    (async () => {
+      try {
+        const saved = await loadState<unknown>();
+        if (!alive) return;
+        if (saved == null) {
+          setState(emptyState(EMPTY_HOUSEHOLD));
+          setFirstRun(true);
+        } else {
+          const { state: next, warnings } = migrateV1(saved, new Date());
+          setState(next);
+          if (warnings.length > 0) {
+            setToast({ message: `迁移完成，有 ${warnings.length} 条提示。` });
+          }
         }
-      } else if (isDesktop()) {
-        void saveState({
-          chains: initialChains,
-          records: initialRecords,
-          activeId: initialChains[0].id,
-          household: initialHousehold,
-        });
+      } catch (err) {
+        if (alive) setLoadError(String(err));
+      } finally {
+        if (alive) setLoaded(true);
       }
-      hydrated.current = true;
-    });
+    })();
     return () => {
       alive = false;
     };
   }, []);
 
   useEffect(() => {
-    if (!hydrated.current) return;
+    if (!loaded || loadError) return;
     const t = window.setTimeout(() => {
-      void saveState({ chains, records, activeId, household });
+      saveState(state)
+        .then(() => setSaveError(null))
+        .catch((err) => setSaveError(String(err)));
     }, 350);
     return () => window.clearTimeout(t);
-  }, [chains, records, activeId, household]);
+  }, [state, loaded, loadError]);
 
   useEffect(() => {
     if (!vaultOpen) return;
@@ -249,7 +316,7 @@ export default function App() {
 
   useEffect(() => {
     if (!toast) return;
-    const t = window.setTimeout(() => setToast(null), 5200);
+    const t = window.setTimeout(() => setToast(null), toast.duration ?? 5200);
     return () => window.clearTimeout(t);
   }, [toast]);
 
@@ -271,17 +338,22 @@ export default function App() {
   }
 
   function buildExport() {
-    const stamp = new Date().toISOString().slice(0, 10);
+    const stamp = now.toISOString().slice(0, 10);
     const outcomeLabel = (o?: Outcome) =>
       o === "hit" ? "成立" : o === "miss" ? "不成立" : o === "insufficient" ? "证据不足" : "—";
-    const json = JSON.stringify({ chains, records, activeId, household }, null, 2);
+    const rateText = rate == null ? "—" : pct(rate, 1);
+    const brierText = brier == null ? "—" : brier.toFixed(3);
+    const eceText = eceValue == null ? "—" : eceValue.toFixed(3);
+    // 导出完整的 v2 state，保证 JSON 可以原样恢复（含理由、快照、暴露、origin）。
+    const json = JSON.stringify(state, null, 2);
     const md = [
       "# Cevtuo Causa / 因果簿",
       "",
-      `导出时间：${new Date().toISOString()}`,
+      `导出时间：${now.toISOString()}`,
       "",
-      `在链 ${live.length} · 已结算 ${chains.length - live.length} · 本周到期 ${due.length}`,
-      `命中 ${pct(rate, 1)} · Brier ${brier.toFixed(3)} · 误差 ${eceValue.toFixed(3)} · 样本 ${records.length}`,
+      `在链 ${live.length} · 已结算 ${chains.length - live.length} · 到期 ${due.length}`,
+      `命中 ${rateText} · Brier ${brierText} · 误差 ${eceText} · 样本 ${statRecords.length}`,
+      `统计口径：${state.settings.showSeedInStats ? "包含演示记录" : "仅用户记录"}`,
       "",
       "## 链条",
       "",
@@ -298,9 +370,16 @@ export default function App() {
       "",
       "## 判定记录",
       "",
-      "| 登记置信 | 结果 |",
-      "|---|---|",
-      ...records.map((r) => `| ${pct(r.confidence)} | ${outcomeLabel(r.outcome)} |`),
+      "| 结算时间 | 登记置信 | 结果 | 理由 |",
+      "|---|---|---|---|",
+      ...state.records
+        .filter((r) => !r.voidedAt)
+        .map(
+          (r) =>
+            `| ${r.settledAt || "—"} | ${pct(r.confidence)} | ${outcomeLabel(
+              r.outcome,
+            )} | ${r.reason.replace(/\|/g, "\\|") || "—"} |`,
+        ),
       "",
       "## 家庭",
       "",
@@ -373,84 +452,166 @@ export default function App() {
     }
   }
 
-  async function resetData() {
+  function resetData() {
+    setState(resetUserData(state, state.household));
+    setConfirmReset(false);
+    setSettingsOpen(false);
+    setToast({ message: "已清空链条与判定记录；家庭 6 个数与审计保留。" });
+    void appendAudit("reset", "清空链条与判定记录");
+  }
+
+  function selectChain(id: string) {
+    setState((s) => setActive(s, id));
+  }
+
+  function openNewChain() {
+    setEditorSeed(undefined);
+    setEditorOpen(true);
+  }
+
+  function openEditChain() {
+    if (!activeCore) return;
+    if (activeCore.settledAt || activeCore.outcome) {
+      setToast({ message: "已结算的链不能再编辑。" });
+      return;
+    }
+    setEditorSeed(activeCore);
+    setEditorOpen(true);
+  }
+
+  function saveChain(chain: CoreChain, mode: "create" | "edit") {
     try {
-      await clearState();
-      setChains(initialChains);
-      setRecords(initialRecords);
-      setActiveId(initialChains[0].id);
-      setHousehold(initialHousehold);
-      setHouseholdSeed(initialHousehold);
-      setConfirmReset(false);
-      setSettingsOpen(false);
-      setToast({ message: "已重置为默认数据。" });
-      void appendAudit("reset", "恢复默认链条与家庭数据");
+      const next =
+        mode === "create"
+          ? createChain(state, chain)
+          : editChain(state, chain.id, chain, now);
+      setState(next);
+      setEditorOpen(false);
+      setEditorSeed(undefined);
+      setView("ledger");
+      void appendAudit(
+        mode === "create" ? "chain_create" : "chain_update",
+        chain.title,
+      );
+      setToast({
+        message:
+          mode === "create"
+            ? "链条已登记。到期前 72 小时置信度会锁定。"
+            : "链条已更新。",
+      });
     } catch (err) {
-      setToast({ message: `重置失败：${String(err)}` });
+      setToast({ message: `保存失败：${String(err)}` });
     }
   }
 
-  function score(id: string, outcome: Outcome) {
-    const chain = chains.find((c) => c.id === id);
+  function openSettle(id: string, outcome?: Outcome) {
+    const chain = state.chains.find((c) => c.id === id);
+    if (!chain) return;
+    if (!canSettle(chain, now)) {
+      const left = daysUntilDue(chain, now);
+      setToast({
+        message:
+          left > 0
+            ? `还有 ${left} 天到期，不能提前结算。`
+            : "这条链尚未到期，不能提前结算。",
+      });
+      return;
+    }
+    setSettleTarget({ id, outcome });
+  }
+
+  function confirmSettle(outcome: Outcome, reason: string) {
+    if (!settleTarget) return;
+    const chain = state.chains.find((c) => c.id === settleTarget.id);
     if (!chain) return;
 
-    const snapshot = { chains, records, activeId };
-    const nextChains = chains.map((c) =>
-      c.id === id ? { ...c, status: "settled" as const, outcome } : c,
-    );
-    const nextLive = nextChains.filter((c) => c.status !== "settled");
-    const nextActive =
-      nextLive.find((c) => c.id === activeId) ?? nextLive[0];
-
-    setChains(nextChains);
-    setRecords([...records, { confidence: chain.confidence, outcome }]);
-    if (nextActive) setActiveId(nextActive.id);
-
+    const recordId = `rec-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`;
     const label =
-      outcome === "hit"
-        ? "成立"
-        : outcome === "miss"
-          ? "不成立"
-          : "证据不足";
+      outcome === "hit" ? "成立" : outcome === "miss" ? "不成立" : "证据不足";
+    const previousActive = state.activeId;
 
-    void appendAudit("settle", `${label} · ${chain.title}`);
+    try {
+      const settledState = settle(state, {
+        chainId: chain.id,
+        outcome,
+        reason,
+        now,
+        recordId,
+      });
+      const nextLive = settledState.chains.find(
+        (c) => !c.settledAt && !c.outcome,
+      );
+      const nextState =
+        previousActive === chain.id && nextLive
+          ? setActive(settledState, nextLive.id)
+          : settledState;
 
-    setToast({
-      message: `已结算「${chain.title}」· ${label}`,
-      undo: () => {
-        setChains(snapshot.chains);
-        setRecords(snapshot.records);
-        setActiveId(snapshot.activeId);
-        setToast(null);
-      },
-    });
+      setState(nextState);
+      setSettleTarget(null);
+      void appendAudit("settle", `${label} · ${chain.title}`);
+
+      setToast({
+        message: `已结算「${chain.title}」· ${label}。10 秒内可撤销。`,
+        duration: 10_000,
+        undo: () => {
+          try {
+            const undone = undoSettle(nextState, {
+              recordId,
+              now,
+            });
+            setState(setActive(undone, previousActive));
+            void appendAudit("settle_undo", `撤销 ${label} · ${chain.title}`);
+            setToast({ message: "已撤销这次结算，记录标记为作废。" });
+          } catch (err) {
+            setToast({ message: `撤销失败：${String(err)}` });
+          }
+        },
+      });
+    } catch (err) {
+      setToast({
+        message:
+          err instanceof RuleError ? err.message : `结算失败：${String(err)}`,
+      });
+    }
+  }
+
+  function loadDemo() {
+    setState(demoState(new Date()));
+    setFirstRun(false);
+    setToast({ message: "已载入演示账本；演示记录可在设置里切换是否计入校准。" });
+    void appendAudit("demo_load", "载入演示账本");
+  }
+
+  function startEmpty() {
+    setFirstRun(false);
+    setEditorSeed(undefined);
+    setEditorOpen(true);
   }
 
   function registerDraft() {
     const id = "draft-eu-wages";
-    if (chains.some((c) => c.id === id)) {
-      setActiveId(id);
+    if (state.chains.some((c) => c.id === id)) {
+      selectChain(id);
       setView("ledger");
       setToast({ message: "这条草案已经在账本里。" });
       return;
     }
 
-    const draft: Chain = {
+    const stamp = new Date().toISOString();
+    const draft: CoreChain = {
       id,
       title: "欧元区工资增速，正在进入你的房租重定价",
       event: "欧元区协商工资同比 4.1%",
       mechanism: ["服务业通胀黏性", "房东把成本写进续租"],
       variable: "你的房租",
       projection: "每月固定支出",
-      coordinates: ["阿姆斯特丹", "远程", "租住", "1 孩"],
-      confidence: 0.5,
-      opened: TODAY,
-      due: "2027-03-31",
-      status: "live",
       summary:
         "工资先推服务业价格，再经过续租周期进入房租；这条链的时滞通常在两到三个季度。",
       counterfactual:
         "如果 ECB 在 2027 年一季度前降息两次，房租传导会被需求走弱抵消。",
+      confidence: 0.5,
+      openedAt: formatDateOnly(now),
+      dueAt: formatDateOnly(addDays(now, 120)),
       signposts: [
         {
           id: "wages",
@@ -459,18 +620,21 @@ export default function App() {
           target: "≥ 4.0%",
           state: "pending",
           source: "Eurostat",
-          at: TODAY,
+          at: formatDateOnly(now),
+          history: [],
         },
       ],
-      sources: [{ name: "Eurostat", state: "ok", at: `${TODAY} 09:00` }],
+      sources: [{ name: "Eurostat", state: "ok", at: formatDateOnly(now) }],
       impacts: [1, 0, 2, 1],
+      tags: ["演示", "房租"],
+      origin: "user",
+      createdAt: stamp,
+      updatedAt: stamp,
     };
 
-    setChains((prev) => [draft, ...prev]);
-    setActiveId(id);
+    setEditorSeed(draft);
+    setEditorOpen(true);
     setView("ledger");
-    setToast({ message: "草案已登记为在链，到期 2027-03-31。" });
-    void appendAudit("draft", draft.title);
   }
 
   const currentIndex = active
@@ -478,7 +642,6 @@ export default function App() {
     : 0;
   const grade = active ? gradeFor(priorityScore(active)) : "C";
   const level = active ? impactLevel(active) : 1;
-  const dueDays = active ? Math.max(0, daysBetween(TODAY, active.due)) : 0;
 
   let finding: ReactNode = null;
   if (view === "projection") {
@@ -490,16 +653,9 @@ export default function App() {
   } else if (view === "calibration") {
     finding = (
       <span className="finding-line">
-        命中 {pct(rate, 1)} · Brier {brier.toFixed(3)} · 误差{" "}
-        {eceValue.toFixed(3)} · 样本 {records.length}
+        命中 {rateText} · Brier {brierText} · 误差 {eceText} · 样本 {sampleSize}
       </span>
     );
-  } else if (view === "aligner") {
-    finding = <span className="finding-line">跨口径数据尚未接入</span>;
-  } else if (view === "diffusion") {
-    finding = <span className="finding-line">政策扩散时间轴尚未接入</span>;
-  } else if (view === "local") {
-    finding = <span className="finding-line">本地镜像尚未接入</span>;
   }
 
   const queueCard = (
@@ -508,13 +664,21 @@ export default function App() {
         <h2 className="card-title">
           <Zap size={15} /> 优先级
         </h2>
-        <span className="count num">{visible.length}</span>
+        <span className="card-head-actions">
+          <button type="button" className="btn btn-mini" onClick={openNewChain}>
+            新建链条
+          </button>
+          <span className="count num">{visible.length}</span>
+        </span>
       </div>
       <PriorityQueue
         chains={visible}
         activeId={active?.id ?? ""}
-        onSelect={setActiveId}
-        onScore={score}
+        onSelect={selectChain}
+        onScore={openSettle}
+        canSettle={settleable}
+        onCreate={openNewChain}
+        statusOf={queueStatus}
       />
     </section>
   );
@@ -554,6 +718,19 @@ export default function App() {
           <main className="main">
             {view === "ledger" ? (
               <>
+                {overdueChains.length > 0 ? (
+                  <button
+                    type="button"
+                    className="overdue-banner"
+                    onClick={() => openSettle(overdueChains[0].id)}
+                  >
+                    <b>{overdueChains.length} 条已逾期</b>
+                    <span>
+                      最近一条：{overdueChains[0].title}。到期后 7 天内应结算；
+                      仍可结算，但会标为逾期。
+                    </span>
+                  </button>
+                ) : null}
                 <div className="mobile-queue">{queueCard}</div>
 
                 <div className="cockpit">
@@ -577,7 +754,10 @@ export default function App() {
                                 </Tip>
                                 <Tip text="距离到期；到期后 7 天内必须判定">
                                   <span className="chip">
-                                    <Clock size={12} /> {dueDays}d
+                                    <Clock size={12} />{" "}
+                                    {dueDays >= 0
+                                      ? `${dueDays}d`
+                                      : `逾期 ${Math.abs(dueDays)}d`}
                                   </span>
                                 </Tip>
                               </div>
@@ -594,6 +774,15 @@ export default function App() {
                                     <Info size={14} />
                                   </button>
                                 </Tip>
+                                {activeCore && !activeCore.settledAt ? (
+                                  <button
+                                    type="button"
+                                    className="btn btn-mini"
+                                    onClick={openEditChain}
+                                  >
+                                    编辑
+                                  </button>
+                                ) : null}
                               </div>
                             </div>
                             <div className="chain-actions">
@@ -627,7 +816,7 @@ export default function App() {
                         <h2 className="card-title">
                           <Scale size={15} /> 校准
                         </h2>
-                        <span className="count num">Brier {brier.toFixed(3)}</span>
+                        <span className="count num">Brier {brierText}</span>
                       </div>
                       <div className="calib-wrap">
                         <CalibrationChart buckets={buckets} />
@@ -635,19 +824,19 @@ export default function App() {
                       <div className="kpi-row">
                         <div>
                           <span>命中</span>
-                          <b className="num">{pct(rate, 1)}</b>
+                          <b className="num">{rateText}</b>
                         </div>
                         <div>
                           <span>Brier</span>
-                          <b className="num">{brier.toFixed(3)}</b>
+                          <b className="num">{brierText}</b>
                         </div>
                         <div>
                           <span>误差</span>
-                          <b className="num">{eceValue.toFixed(3)}</b>
+                          <b className="num">{eceText}</b>
                         </div>
                         <div>
                           <span>样本</span>
-                          <b className="num">{records.length}</b>
+                          <b className="num">{sampleSize}</b>
                         </div>
                         <div>
                           <span>覆盖</span>
@@ -719,7 +908,7 @@ export default function App() {
                     <ProjectionMatrix
                       chains={projectionChains}
                       activeId={active?.id ?? ""}
-                      onSelect={setActiveId}
+                      onSelect={selectChain}
                     />
                   </section>
                 </div>
@@ -751,11 +940,17 @@ export default function App() {
                       <h2 className="card-title">
                         <Scale size={15} /> 实际命中率 vs 登记置信度
                       </h2>
-                      <span className="count num">{records.length} 条</span>
+                      <span className="count num">{sampleSize} 条</span>
                     </div>
                     <div className="calib-wrap" style={{ maxWidth: 680 }}>
                       <CalibrationChart buckets={buckets} />
                     </div>
+                    {sampleSize === 0 && state.records.length > 0 ? (
+                      <p className="settle-note" style={{ padding: "0 20px 14px" }}>
+                        当前只统计你自己的判定；演示 / 迁移记录未计入。
+                        可在设置里打开“包含演示记录”查看它们。
+                      </p>
+                    ) : null}
                   </section>
                   <section className="card">
                     <div className="card-head">
@@ -792,7 +987,7 @@ export default function App() {
                   <section className="card">
                     <div className="card-head">
                       <h2 className="card-title">最近结算</h2>
-                      <span className="count num">n={records.length}</span>
+                      <span className="count num">n={sampleSize}</span>
                     </div>
                     {recordRows.map((r, i) => (
                       <div className="source-row" key={`${r.confidence}-${i}`}>
@@ -826,29 +1021,6 @@ export default function App() {
               </div>
             ) : null}
 
-            {view === "aligner" ||
-            view === "diffusion" ||
-            view === "local" ? (
-              <div className="card">
-                <div className="empty" style={{ margin: 24 }}>
-                  <strong>{VIEW_TITLE[view]}将在下一轮接入</strong>
-                  {view === "aligner"
-                    ? "先把同一组指标在中、美、欧的定义、权重与修订历史对齐，再接进账本。"
-                    : view === "diffusion"
-                      ? "先把政策工具本体与历史扩散案例整理出来，再输出下一站候选。"
-                      : "先确认一个城市、四个可维护的数据源，再谈指数。"}
-                  <div style={{ marginTop: 16 }}>
-                    <button
-                      type="button"
-                      className="btn"
-                      onClick={() => setView("ledger")}
-                    >
-                      返回账本
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : null}
           </main>
 
         </div>
@@ -1088,16 +1260,19 @@ export default function App() {
                   setBillNote(undefined);
                 }}
                 onSave={(next) => {
-                  setHousehold(next);
-                  setHouseholdOpen(false);
-                  setBillNote(undefined);
-                  setToast({
-                    message: "家庭 6 个数已保存，并写入本地数据库。",
-                  });
-                  void appendAudit(
-                    "household",
-                    `收入 ${next.income} · 房贷 ${next.mortgage} · 现金 ${next.liquid}`,
-                  );
+                  try {
+                    setState((s) => setHouseholdState(s, next));
+                    setHouseholdSeed(next);
+                    setHouseholdOpen(false);
+                    setBillNote(undefined);
+                    setToast({
+                      message: "家庭 6 个数已保存，并写入本地数据库。",
+                    });
+                    // 审计只记动作，不记金额。
+                    void appendAudit("household", "家庭 6 个数已更新");
+                  } catch (err) {
+                    setToast({ message: `保存失败：${String(err)}` });
+                  }
                 }}
               />
             </motion.div>
@@ -1134,7 +1309,7 @@ export default function App() {
                 <h2>
                   <Settings size={16} /> 设置
                 </h2>
-                <span className="pill">0.2.0</span>
+                <span className="pill">0.3.0-dev</span>
               </div>
               <div className="dialog-rows">
                 <div>
@@ -1147,11 +1322,28 @@ export default function App() {
                 </div>
                 <div>
                   <span>导出</span>
-                  <b>全量 JSON + Markdown</b>
+                  <b>全量 JSON + Markdown（明文）</b>
                 </div>
                 <div>
                   <span>数据</span>
                   <b>本机 · 不上传</b>
+                </div>
+                <div>
+                  <span>校准口径</span>
+                  <b>
+                    <label className="inline-check">
+                      <input
+                        type="checkbox"
+                        checked={state.settings.showSeedInStats}
+                        onChange={(e) =>
+                          setState((s) =>
+                            setShowSeedInStats(s, e.target.checked),
+                          )
+                        }
+                      />
+                      包含演示 / 迁移记录
+                    </label>
+                  </b>
                 </div>
               </div>
               <div className="audit-block">
@@ -1177,11 +1369,12 @@ export default function App() {
               </div>
               {confirmReset ? (
                 <p className="dialog-lead">
-                  确认重置为默认数据？当前已结算的链条与草案会被删除，无法撤销。
+                  确认清空？所有链条与判定记录会被删除；家庭 6 个数与审计保留。
                 </p>
               ) : (
                 <p className="dialog-lead">
-                  导出会写入“下载”目录；浏览器预览走普通下载。
+                  导出是明文文件，会写入“下载”目录（可能被 iCloud 等同步）；
+                  浏览器预览走普通下载。审计只记录动作，不记录金额。
                 </p>
               )}
               <div className="dialog-actions">
@@ -1233,6 +1426,63 @@ export default function App() {
         ) : null}
       </AnimatePresence>
 
+      <FirstRunDialog
+        open={firstRun && !editorOpen}
+        onEmpty={startEmpty}
+        onDemo={loadDemo}
+      />
+
+      <ChainEditor
+        open={editorOpen}
+        initial={editorSeed}
+        now={now}
+        onClose={() => {
+          setEditorOpen(false);
+          setEditorSeed(undefined);
+        }}
+        onSave={saveChain}
+      />
+
+      <SettleDialog
+        open={!!settleTarget}
+        chain={settleChain}
+        now={now}
+        initialOutcome={settleTarget?.outcome}
+        onClose={() => setSettleTarget(null)}
+        onConfirm={confirmSettle}
+      />
+
+      {loadError ? (
+        <div className="fatal-overlay" role="alertdialog" aria-label="载入失败">
+          <div className="dialog glass">
+            <div className="dialog-head">
+              <h2>无法读取本地账本</h2>
+              <span className="pill stale">未写入</span>
+            </div>
+            <p className="dialog-lead">
+              读取失败时应用不会写入默认值，避免覆盖你的数据。请重试；如果持续失败，
+              先备份数据库文件再处理。
+            </p>
+            <p className="dialog-lead"><code>{loadError}</code></p>
+            <div className="dialog-actions">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => window.location.reload()}
+              >
+                重试
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {saveError ? (
+        <div className="save-banner" role="alert">
+          写入失败：{saveError}。当前修改可能未保存。
+        </div>
+      ) : null}
+
       <CommandPalette
         open={paletteOpen}
         seed={paletteSeed}
@@ -1240,7 +1490,7 @@ export default function App() {
         due={due}
         visible={visible}
         rate={rate}
-        recordsCount={records.length}
+        recordsCount={sampleSize}
         onRegisterDraft={registerDraft}
       />
 

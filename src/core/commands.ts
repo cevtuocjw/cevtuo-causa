@@ -138,6 +138,10 @@ export function setHousehold(state: StateV2, household: Household): StateV2 {
   return { ...state, household: { ...household } };
 }
 
+export function setShowSeedInStats(state: StateV2, show: boolean): StateV2 {
+  return { ...state, settings: { ...state.settings, showSeedInStats: show } };
+}
+
 export function setActive(state: StateV2, activeId: string): StateV2 {
   if (!state.chains.some((c) => c.id === activeId)) return state;
   return { ...state, activeId };

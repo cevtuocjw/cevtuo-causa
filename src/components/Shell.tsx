@@ -3,11 +3,8 @@ import type { ReactNode } from "react";
 import { AnimatePresence } from "motion/react";
 import {
   BookOpen,
-  Columns3,
   Lock,
-  MapPin,
   RefreshCw,
-  Route,
   Scale,
   Search,
   Settings,
@@ -18,21 +15,12 @@ import { CADENCE } from "../data/chains";
 import { Mark } from "./Icon";
 import { RefreshPanel } from "./Quant";
 
-export type View =
-  | "ledger"
-  | "projection"
-  | "calibration"
-  | "aligner"
-  | "diffusion"
-  | "local";
+export type View = "ledger" | "projection" | "calibration";
 
 const NAV: { id: View; label: string; icon: LucideIcon }[] = [
   { id: "ledger", label: "账本", icon: BookOpen },
   { id: "projection", label: "投影", icon: Target },
   { id: "calibration", label: "校准", icon: Scale },
-  { id: "aligner", label: "口径对齐", icon: Columns3 },
-  { id: "diffusion", label: "政策扩散", icon: Route },
-  { id: "local", label: "本地镜像", icon: MapPin },
 ];
 
 export function IconRail({

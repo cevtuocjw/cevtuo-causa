@@ -45,7 +45,12 @@ describe("stats 口径", () => {
   });
 
   it("ECE 按桶内可判定样本加权", () => {
-    expect(ece(records)).toBeCloseTo(0.1, 6);
+    expect(ece(eligibleRecords(records))).toBeCloseTo(0.1, 6);
+  });
+
+  it("ECE 不再二次过滤：传入含 seed 的记录时应计算而不是返回 null", () => {
+    const withSeed = eligibleRecords(records, { includeSeed: true });
+    expect(ece(withSeed)).not.toBeNull();
   });
 
   it("置信度 1.0 落在最后一个桶", () => {

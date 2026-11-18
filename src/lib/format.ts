@@ -1,4 +1,27 @@
-export const TODAY = "2026-11-18";
+function localToday(): string {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+/** dev 测试时钟；生产由当前日期决定，不再写死 2026-11-18。 */
+function devNowParam(): unknown {
+  if (!import.meta.env.DEV) return undefined;
+  const globalNow = (globalThis as { __CAUSA_TEST_NOW__?: unknown })
+    .__CAUSA_TEST_NOW__;
+  if (typeof globalNow === "string") return globalNow;
+  try {
+    return new URLSearchParams(window.location.search).get("now") ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const testNow = devNowParam();
+
+export const TODAY =
+  typeof testNow === "string" ? testNow.slice(0, 10) : localToday();
 
 export function pct(n: number, digits = 0): string {
   return `${(n * 100).toFixed(digits)}%`;

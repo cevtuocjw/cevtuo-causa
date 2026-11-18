@@ -84,7 +84,7 @@ case "press", "value":
   let needle = args[2]
   let hit = walk(app) { el, _ in
     let role = str(el, kAXRoleAttribute)
-    guard role == "AXButton" || role == "AXTextField" else { return false }
+    guard role == "AXButton" || role == "AXTextField" || role == "AXCheckBox" || role == "AXRadioButton" else { return false }
     let texts = [str(el, kAXTitleAttribute), str(el, kAXDescriptionAttribute), str(el, "AXLabel"), str(el, kAXValueAttribute)]
     return texts.contains { $0.contains(needle) }
   }

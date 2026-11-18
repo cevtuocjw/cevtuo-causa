@@ -317,19 +317,35 @@ export function PriorityQueue({
   activeId,
   onSelect,
   onScore,
+  canSettle,
+  onCreate,
+  statusOf,
 }: {
   chains: Chain[];
   activeId: string;
   onSelect: (id: string) => void;
   onScore: (id: string, outcome: Outcome) => void;
+  canSettle?: (id: string) => boolean;
+  onCreate?: () => void;
+  statusOf?: (id: string) => "locked" | "due" | "overdue" | null;
 }) {
   const sorted = [...chains].sort((a, b) => priorityScore(b) - priorityScore(a));
 
   if (sorted.length === 0) {
     return (
       <div className="empty" style={{ margin: 16 }}>
-        <strong>没有在链</strong>
-        起草一条新链，或等下一批。
+        <strong>还没有在链</strong>
+        写下第一条你愿意在到期日结算的判断。
+        {onCreate ? (
+          <button
+            type="button"
+            className="btn btn-primary"
+            style={{ marginTop: 12 }}
+            onClick={onCreate}
+          >
+            新建链条
+          </button>
+        ) : null}
       </div>
     );
   }
@@ -356,33 +372,47 @@ export function PriorityQueue({
               </span>
               <span className="qtitle">{c.title}</span>
               <span className={`qgrade g-${grade}`}>{grade}</span>
+              {statusOf?.(c.id) ? (
+                <span className={`qstate ${statusOf(c.id)}`}>
+                  {statusOf(c.id) === "overdue"
+                    ? "逾期"
+                    : statusOf(c.id) === "due"
+                      ? "到期"
+                      : "锁定"}
+                </span>
+              ) : null}
               <span className="qscore num">{score}</span>
             </button>
             <div className="qbar" aria-hidden="true">
               <i style={{ width: `${score}%` }} />
             </div>
             <div className="qactions">
-              <Tip text="成立">
+              <Tip text={canSettle?.(c.id) === false ? "未到期，不能结算" : "成立"}>
                 <button
                   type="button"
+                  disabled={canSettle?.(c.id) === false}
                   onClick={() => onScore(c.id, "hit")}
                   aria-label="成立"
                 >
                   <Check size={14} />
                 </button>
               </Tip>
-              <Tip text="不成立">
+              <Tip text={canSettle?.(c.id) === false ? "未到期，不能结算" : "不成立"}>
                 <button
                   type="button"
+                  disabled={canSettle?.(c.id) === false}
                   onClick={() => onScore(c.id, "miss")}
                   aria-label="不成立"
                 >
                   <X size={14} />
                 </button>
               </Tip>
-              <Tip text="证据不足">
+              <Tip
+                text={canSettle?.(c.id) === false ? "未到期，不能结算" : "证据不足"}
+              >
                 <button
                   type="button"
+                  disabled={canSettle?.(c.id) === false}
                   onClick={() => onScore(c.id, "insufficient")}
                   aria-label="证据不足"
                 >
@@ -538,7 +568,7 @@ export function BriefingStrip({
 }: {
   due: number;
   reversed: number;
-  rate: number;
+  rate: number | null;
   topScore: number;
 }) {
   return (
@@ -553,7 +583,7 @@ export function BriefingStrip({
       </span>
       <span className="brief-item">
         <Target size={12} />
-        <b className="num">{pct(rate, 1)}</b> 命中
+        <b className="num">{rate == null ? "—" : pct(rate, 1)}</b> 命中
       </span>
       <span className="brief-item">
         <Zap size={12} />
@@ -622,15 +652,15 @@ export function MethodCard({
   eceValue,
   cover,
 }: {
-  brier: number;
-  eceValue: number;
+  brier: number | null;
+  eceValue: number | null;
   cover: number;
 }) {
   const rows: [string, string][] = [
     ["优先级", "0.4I+0.3C+0.2U+0.1R"],
     ["影响等级", "L1–L5 · 0–8"],
-    ["Brier", brier.toFixed(3)],
-    ["校准误差", eceValue.toFixed(3)],
+    ["Brier", brier == null ? "—" : brier.toFixed(3)],
+    ["校准误差", eceValue == null ? "—" : eceValue.toFixed(3)],
     ["覆盖", pct(cover, 0)],
     ["事件流", "15 min"],
     ["统计", "T+31d"],

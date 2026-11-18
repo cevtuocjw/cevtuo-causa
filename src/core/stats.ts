@@ -93,18 +93,28 @@ export function brier(records: readonly StatRecord[]): number | null {
   return sum / decided.length;
 }
 
-/** ECE：按分桶加权的 |实际命中率 − 桶中点|；只算可判定样本。 */
-export function ece(
-  records: readonly StatRecord[],
-  options: StatsOptions = {},
-): number | null {
-  const buckets = calibration(records, options);
-  const decidedTotal = buckets.reduce((n, b) => n + b.decided, 0);
-  if (decidedTotal === 0) return null;
-  const sum = buckets.reduce((n, b) => {
-    if (b.decided === 0 || b.hitRate == null) return n;
-    return n + (b.decided / decidedTotal) * Math.abs(b.hitRate - b.mid);
+/**
+ * ECE：按分桶加权的 |实际命中率 − 桶中点|；只算可判定样本。
+ * 与 hitRate / brier 一样，传入的记录必须已经过 eligibleRecords 过滤；
+ * 这里不再二次过滤，否则会把调用方明确要求包含的演示记录又排除掉。
+ */
+export function ece(records: readonly StatRecord[]): number | null {
+  const decided = records.filter((r) => r.outcome !== "insufficient");
+  if (decided.length === 0) return null;
+  const last = CALIBRATION_BUCKETS.length - 1;
+
+  const sum = CALIBRATION_BUCKETS.reduce((acc, b, index) => {
+    const rows = decided.filter((r) =>
+      index === last
+        ? r.confidence >= b.min && r.confidence <= b.max
+        : r.confidence >= b.min && r.confidence < b.max,
+    );
+    if (rows.length === 0) return acc;
+    const hits = rows.filter((r) => r.outcome === "hit").length;
+    const rate = hits / rows.length;
+    return acc + (rows.length / decided.length) * Math.abs(rate - b.mid);
   }, 0);
+
   return sum;
 }
 
