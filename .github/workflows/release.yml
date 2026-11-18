@@ -1,0 +1,45 @@
+name: release
+
+# 推 v* tag 时构建未签名的 universal macOS 包并挂到 GitHub Release。
+# 没有 Apple Developer 账号，所以这里刻意不做签名 / 公证；见 DISTRIBUTION.md。
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+      - run: npm run build
+      - run: npx tauri build --target universal-apple-darwin --bundles app,dmg
+
+      - run: bash scripts/release.sh --skip-build
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/*.dmg
+            release/*.zip
+            release/SHA256SUMS.txt
+          body_path: release/RELEASE-NOTES.md

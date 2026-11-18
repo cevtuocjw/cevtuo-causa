@@ -1,0 +1,41 @@
+:root {
+  /* Fey-derived nocturnal terminal */
+  --ground: #0b0b0b;
+  --surface: #131313;
+  --raised: #191919;
+  --border: #1c1c1d;
+  --rule: #161717;
+  --control: #2a2a2c;
+
+  --text: #ffffff;
+  --soft: #e6e6e6;
+  --muted: #868f97;
+  --faint: #999999;
+
+  --accent: #e87a4f;
+  --accent-soft: rgba(232, 122, 79, 0.14);
+  --link: #479ffa;
+  --positive: #4ebe96;
+  --negative: #ef4444;
+  --warning: #e8b44f;
+
+  /* Glass */
+  --glass: rgba(255, 255, 255, 0.045);
+  --glass-edge: rgba(255, 255, 255, 0.09);
+  --glass-sheen: rgba(255, 255, 255, 0.1);
+
+  /* Shape */
+  --radius-card: 16px;
+  --radius-control: 999px;
+  --radius-chip: 999px;
+
+  /* Frame */
+  --rail: 64px;
+  --gap: 16px;
+  --pad: 24px;
+
+  /* Type */
+  --font-sans: "Inter Tight Variable", "Inter Tight", "PingFang SC",
+    "Hiragino Sans GB", "Noto Sans CJK SC", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", ui-monospace, Menlo, monospace;
+}
