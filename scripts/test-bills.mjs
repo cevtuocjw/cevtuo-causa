@@ -1,6 +1,6 @@
 // 账单解析回归测试：node --experimental-strip-types scripts/test-bills.mjs
 import assert from "node:assert/strict";
-import { parseBillCsv, splitCsvLine } from "../src/lib/bills.ts";
+import { applyBillCategories, parseBillCsv, splitCsvLine } from "../src/lib/bills.ts";
 
 const wechat = `微信支付账单明细
 微信昵称：[test]
@@ -36,10 +36,18 @@ const w = parseBillCsv(wechat);
 assert.ok(w, "wechat should parse");
 assert.equal(w.source, "wechat");
 assert.deepEqual(w.months, ["2026-08", "2026-09", "2026-10"]);
-assert.equal(w.rows, 7, "refund + income rows are skipped");
+assert.equal(w.rows, 6, "refund + income + transfer rows are skipped");
+assert.equal(w.skipped, 1, "transfer row is skipped");
 assert.equal(w.avgMortgage, 11200);
 assert.equal(w.avgFixed, 367);
-assert.equal(w.avgExpense, 11753);
+assert.equal(w.avgExpense, 11587);
+assert.equal(w.items.length, 6);
+assert.equal(w.items.filter((i) => i.kind === "mortgage").length, 3);
+assert.ok(w.items.some((i) => i.label.includes("午餐")));
+
+const recat = applyBillCategories(w, w.items.map((i, idx) => (idx === 0 ? "fixed" : i.kind)));
+assert.equal(recat.avgMortgage, 7467);
+assert.equal(recat.avgFixed, 4100);
 
 const a = parseBillCsv(alipay);
 assert.ok(a, "alipay should parse");
@@ -53,4 +61,4 @@ assert.equal(a.avgExpense, 13250);
 assert.equal(parseBillCsv("hello,world\n1,2"), null, "no header -> null");
 assert.equal(parseBillCsv("交易时间,金额(元)\n2026-08-01,0"), null, "no rows -> null");
 
-console.log("bills.test: 12 assertions passed");
+console.log("bills.test: all assertions passed");

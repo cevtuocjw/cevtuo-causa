@@ -8,6 +8,7 @@ import { writeFileSync } from "node:fs";
 const PORT = Number(process.env.CDP_PORT ?? 9224);
 const APP = process.env.APP_URL ?? "http://localhost:5173/";
 const IMPORT_FILE = process.env.IMPORT_FILE ?? `${process.cwd()}/scripts/fixtures/import-v1.json`;
+const CSV_FILE = process.env.CSV_FILE ?? `${process.cwd()}/scripts/fixtures/wechat-sample.csv`;
 const target = await fetch(`http://127.0.0.1:${PORT}/json/new?about:blank`, { method: "PUT" }).then(r => r.json());
 const ws = new WebSocket(target.webSocketDebuggerUrl);
 let seq = 0; const pending = new Map(); const logs = [];
@@ -86,6 +87,27 @@ await click(`[...document.querySelectorAll("button")].find(x => x.innerText.trim
 await waitFor(`document.body.innerText.includes("若成立")`, "exposure line");
 out.exposureShown = await js(`document.body.innerText.includes("月缓冲") && document.body.innerText.includes("5%")`);
 await shot("/tmp/causa-m3-exposure.png");
+
+// CSV 复核：转账被跳过、分类可改判
+const csvNode = await send("DOM.querySelector", { nodeId: doc.result.root.nodeId, selector: 'input[accept=".csv"]' });
+await send("DOM.setFileInputFiles", { files: [CSV_FILE], nodeId: csvNode.result.nodeId });
+await waitFor(`document.body.innerText.includes("复核账单分类")`, "bill review");
+out.billReview = true;
+out.billRows = await js(`document.querySelectorAll(".bill-row").length`);
+out.transferSkipped = await js(`document.body.innerText.includes("跳过 1 笔")`);
+out.billPreviewBefore = await js(`document.querySelector(".bill-preview")?.innerText`);
+await js(`(() => {
+  const sel = document.querySelector(".bill-row select");
+  const desc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(sel), "value");
+  desc.set.call(sel, "fixed");
+  sel.dispatchEvent(new Event("change", { bubbles: true }));
+})()`);
+await new Promise(r => setTimeout(r, 300));
+out.billPreviewAfter = await js(`document.querySelector(".bill-preview")?.innerText`);
+await shot("/tmp/causa-m3-bills.png");
+await click(`[...document.querySelectorAll("button")].find(x => x.innerText.includes("用这些估算"))`);
+await waitFor(`document.body.innerText.includes("家庭校准")`, "household form");
+out.billNote = await js(`document.body.innerText.includes("月均支出 ¥11,750")`);
 
 out.consoleErrors = logs.filter(e => e.method === "Log.entryAdded" && e.params.entry.level === "error").map(e => e.params.entry.text).filter(t => !t.includes("favicon"));
 console.log(JSON.stringify(out, null, 2));

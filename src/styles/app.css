@@ -2696,3 +2696,95 @@ h1 {
   background: var(--accent-soft);
   color: var(--accent);
 }
+
+.bill-review {
+  width: min(760px, 96vw);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.bill-preview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.bill-preview div {
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.bill-preview span {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.bill-preview b {
+  display: block;
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.bill-list {
+  overflow: auto;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+
+.bill-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 92px 76px;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 10px;
+  border-top: 1px solid var(--rule);
+  font-size: 11px;
+}
+
+.bill-row:first-child {
+  border-top: 0;
+}
+
+.bill-month {
+  color: var(--faint);
+}
+
+.bill-label {
+  color: var(--soft);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.bill-amount {
+  text-align: right;
+  color: var(--text);
+}
+
+.bill-row select {
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--control);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font-size: 11px;
+}
+
+@media (max-width: 680px) {
+  .bill-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .bill-row {
+    grid-template-columns: 54px minmax(0, 1fr) 78px 68px;
+    font-size: 10px;
+  }
+}

@@ -23,6 +23,7 @@ import { CalibrationChart } from "./components/CalibrationChart";
 import { ProjectionMatrix } from "./components/ProjectionMatrix";
 import { CommandPalette } from "./components/CommandPalette";
 import { HouseholdForm } from "./components/HouseholdForm";
+import { BillReviewDialog } from "./components/BillReviewDialog";
 import { ChainEditor } from "./components/ChainEditor";
 import { SettleDialog } from "./components/SettleDialog";
 import { FirstRunDialog } from "./components/FirstRunDialog";
@@ -75,7 +76,7 @@ import { projectExposure } from "./core/exposure";
 import { addDays, formatDateOnly } from "./core/time";
 import { demoState } from "./data/demo";
 import { toChainView } from "./lib/chain-view";
-import { decodeBill, parseBillCsv } from "./lib/bills";
+import { decodeBill, parseBillCsv, type BillSummary } from "./lib/bills";
 import { pct } from "./lib/format";
 import {
   appendAudit,
@@ -180,6 +181,7 @@ export default function App() {
   const [householdOpen, setHouseholdOpen] = useState(false);
   const [householdSeed, setHouseholdSeed] = useState<Household>(EMPTY_HOUSEHOLD);
   const [billNote, setBillNote] = useState<string | undefined>();
+  const [billReview, setBillReview] = useState<BillSummary | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [auditRows, setAuditRows] = useState<AuditRow[]>([]);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -452,33 +454,38 @@ export default function App() {
         });
         return;
       }
-      const source =
-        summary.source === "wechat"
-          ? "微信"
-          : summary.source === "alipay"
-            ? "支付宝"
-            : "未知来源";
-      const next: Household = {
-        ...household,
-        fixed: summary.avgFixed > 0 ? summary.avgFixed : household.fixed,
-        mortgage:
-          summary.avgMortgage > 0 ? summary.avgMortgage : household.mortgage,
-      };
-      void appendAudit(
-        "import",
-        `${source} · ${summary.rows} 笔 · ${summary.months.join("/")}`,
-      );
-      openHousehold(
-        next,
-        `已从${source}账单估算：${summary.months.join(" / ")} 共 ${summary.rows} 笔支出，` +
-          `月均支出 ¥${summary.avgExpense.toLocaleString("en-US")}，其中房贷 ` +
-          `¥${summary.avgMortgage.toLocaleString("en-US")}、固定支出 ` +
-          `¥${summary.avgFixed.toLocaleString("en-US")}。` +
-          "账单里没有收入 / 现金 / 负债，请补齐后保存；不会读取或上传其他内容。",
-      );
+      setBillReview(summary);
     } catch (err) {
       setToast({ message: `读取失败：${String(err)}` });
     }
+  }
+
+  function confirmBillReview(adjusted: BillSummary) {
+    const source =
+      adjusted.source === "wechat"
+        ? "微信"
+        : adjusted.source === "alipay"
+          ? "支付宝"
+          : "未知来源";
+    const next: Household = {
+      ...household,
+      fixed: adjusted.avgFixed > 0 ? adjusted.avgFixed : household.fixed,
+      mortgage:
+        adjusted.avgMortgage > 0 ? adjusted.avgMortgage : household.mortgage,
+    };
+    void appendAudit(
+      "import",
+      `${source} · ${adjusted.rows} 笔 · 跳过 ${adjusted.skipped} · ${adjusted.months.join("/")}`,
+    );
+    setBillReview(null);
+    openHousehold(
+      next,
+      `已从${source}账单估算：${adjusted.months.join(" / ")} 共 ${adjusted.rows} 笔支出，` +
+        `月均支出 ¥${adjusted.avgExpense.toLocaleString("en-US")}，其中房贷 ` +
+        `¥${adjusted.avgMortgage.toLocaleString("en-US")}、固定支出 ` +
+        `¥${adjusted.avgFixed.toLocaleString("en-US")}。` +
+        "分类可在复核页改判；账单里没有收入 / 现金 / 负债，请补齐后保存。",
+    );
   }
 
   function resetData() {
@@ -1551,6 +1558,12 @@ export default function App() {
           </motion.div>
         ) : null}
       </AnimatePresence>
+
+      <BillReviewDialog
+        summary={billReview}
+        onCancel={() => setBillReview(null)}
+        onConfirm={confirmBillReview}
+      />
 
       <AnimatePresence>
         {importPreview ? (
