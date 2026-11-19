@@ -13,7 +13,8 @@
     "desktop:build": "tauri build --bundles app",
     "e2e": "node scripts/e2e-smoke.mjs",
     "e2e:m3": "node scripts/e2e-m3.mjs",
-    "e2e:research": "node scripts/e2e-research.mjs"
+    "e2e:research": "node scripts/e2e-research.mjs",
+    "source:health": "node scripts/source-health.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter-tight": "^5.3.0",

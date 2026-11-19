@@ -20,6 +20,7 @@ import {
   type DiffusionStep,
 } from "../core/diffusion";
 import { DIFFUSION_CASES } from "../data/diffusion";
+import { getSource } from "../data/sourceRegistry";
 import { SOURCE_KIND_LABEL, SOURCE_KIND_HINT } from "../core/source";
 import type { Chain } from "../core/types";
 
@@ -31,6 +32,7 @@ const CONFIDENCE_TONE: Record<Confidence, "positive" | "warning" | "negative"> =
 
 function StepCard({ step }: { step: DiffusionStep }) {
   const evidence = hasEvidence(step);
+  const meta = getSource(step.sourceId);
   return (
     <article className={`diff-card ${step.status} ${evidence ? "" : "missing"}`}>
       <div className="diff-card-head">
@@ -39,10 +41,10 @@ function StepCard({ step }: { step: DiffusionStep }) {
         </span>
         <span className="region-badges">
           <span
-            className={`chip source-kind ${step.urlKind}`}
-            title={SOURCE_KIND_HINT[step.urlKind]}
+            className={`chip source-kind ${meta?.kind ?? "sample"}`}
+            title={meta ? SOURCE_KIND_HINT[meta.kind] : "来源未登记"}
           >
-            {SOURCE_KIND_LABEL[step.urlKind]}
+            {meta ? SOURCE_KIND_LABEL[meta.kind] : "未登记"}
           </span>
           <span className={`pill ${CONFIDENCE_TONE[step.confidence]}`}>
             {CONFIDENCE_LABEL[step.confidence]}置信
@@ -55,15 +57,17 @@ function StepCard({ step }: { step: DiffusionStep }) {
       <div className="diff-evidence">
         <span>证据</span>
         <p>
-          <a href={step.url} target="_blank" rel="noreferrer">
-            {step.evidence} ↗
-          </a>
+          {meta?.url ? (
+            <a href={meta.url} target="_blank" rel="noreferrer">
+              {step.evidence} ↗
+            </a>
+          ) : (
+            <span>{step.evidence}（无公开链接）</span>
+          )}
         </p>
-        {step.docNumber ? (
-          <span className="source-meta">{step.docNumber}</span>
-        ) : null}
+        {meta?.dataset ? <span className="source-meta">{meta.dataset}</span> : null}
         <span className="source-meta">
-          发布 {step.publishedAt ?? "—"} · 抓取 {step.retrievedAt}
+          发布 {meta?.publishedAt ?? "—"} · 抓取 {meta?.retrievedAt ?? "—"}
         </span>
         {step.note ? <span className="source-meta">{step.note}</span> : null}
       </div>

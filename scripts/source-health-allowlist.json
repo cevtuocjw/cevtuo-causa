@@ -1,0 +1,38 @@
+{
+  "us-ism-pmi-2026-10": {
+    "result": "blocked",
+    "reason": "ISM 对脚本请求 302 到 SSO 登录页；浏览器/curl 可读正文，已核对 55.5。"
+  },
+  "cn-customs-portal": {
+    "result": "blocked",
+    "reason": "海关总署对非浏览器请求返回 412 WAF 预检；门户本身可用，需人工打开核实。"
+  },
+  "eu-hcob-pmi-2026-10": {
+    "result": "blocked",
+    "reason": "S&P Global 反爬返回 403；正文已通过搜索索引核对，正式引用前人工打开一次。"
+  },
+  "us-bls-cpi-sep-2026": {
+    "result": "blocked",
+    "reason": "BLS 对非浏览器请求返回 403；正文已通过搜索索引核对，正式引用前人工打开一次。"
+  },
+  "us-bls-employment-2026-10": {
+    "result": "blocked",
+    "reason": "BLS 对非浏览器请求返回 403；正文已通过搜索索引核对，正式引用前人工打开一次。"
+  },
+  "us-case-shiller-2026-08": {
+    "result": "blocked",
+    "reason": "S&P DJI 反爬返回 403；正文已通过搜索索引核对，正式引用前人工打开一次。"
+  },
+  "us-sec-edgar": {
+    "result": "blocked",
+    "reason": "SEC EDGAR 要求浏览器会话，脚本请求返回 403；只作为门户，不作为已核实的财报页。"
+  },
+  "us-ustr-nte-2027": {
+    "result": "blocked",
+    "reason": "Federal Register 对脚本请求 302 到 unblock WAF 挑战页；curl/浏览器可读，正文已核对。"
+  },
+  "us-ustr-usmca-2027": {
+    "result": "blocked",
+    "reason": "Federal Register 对脚本请求 302 到 unblock WAF 挑战页；curl/浏览器可读，正文已核对。"
+  }
+}

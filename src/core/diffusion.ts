@@ -1,5 +1,3 @@
-import type { SourceKind } from "./source";
-
 export const STAGES = [
   "announced",
   "consultation",
@@ -19,16 +17,10 @@ export interface DiffusionStep {
   window: string;
   /** 触发条件；没有触发条件就不算下一步。 */
   trigger: string;
+  /** 界面上的短标签；完整标题、文号、URL 从注册表取。 */
   evidence: string;
-  /** 官方文件或门户链接。 */
-  url: string;
-  urlKind: SourceKind;
-  /** 页面自带的发布日期；门户可不填。 */
-  publishedAt?: string;
-  /** 本机打开并核对页面的日期。 */
-  retrievedAt: string;
-  /** 文号、法案号、案件号或咨询编号。 */
-  docNumber?: string;
+  /** 指向 source-registry.json。 */
+  sourceId: string;
   /** 这条证据的边界，例如“报道页，原文未检索到”。 */
   note?: string;
   confidence: Confidence;

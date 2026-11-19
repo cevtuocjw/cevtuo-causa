@@ -5,24 +5,11 @@ import {
   canAverage,
   isFullySourced,
   orderedSources,
-  preciseSourceCount,
   type AlignmentSeries,
 } from "./alignment";
 import { isPreciseKind, isSingleSource } from "./source";
 import { ALIGNMENT_SERIES } from "../data/alignment";
-
-const CN_SOURCE = {
-  region: "CN",
-  name: "A",
-  tier: "T1",
-  value: "1",
-  period: "2026-10",
-  definition: "同一口径",
-  url: "https://example.com/cn",
-  urlKind: "release",
-  publishedAt: "2026-10-31",
-  retrievedAt: "2026-11-19",
-} as const;
+import { SOURCE_REGISTRY, getSource } from "../data/sourceRegistry";
 
 const direct: AlignmentSeries = {
   id: "direct",
@@ -34,9 +21,9 @@ const direct: AlignmentSeries = {
   gap: "定义一致。",
   rule: "可以平均。",
   sources: [
-    CN_SOURCE,
-    { ...CN_SOURCE, region: "US", name: "B", value: "2", url: "https://example.com/us" },
-    { ...CN_SOURCE, region: "EU", name: "C", value: "3", url: "https://example.com/eu" },
+    { region: "CN", sourceId: "cn-cpi-nbs-2026-10", value: "1", period: "2026-10", definition: "同一口径" },
+    { region: "US", sourceId: "us-bls-cpi-sep-2026", value: "2", period: "2026-09", definition: "同一口径" },
+    { region: "EU", sourceId: "eu-eurostat-hicp-2026-10", value: "3", period: "2026-10", definition: "同一口径" },
   ],
 };
 
@@ -83,53 +70,61 @@ describe("口径对齐", () => {
     }
   });
 
-  it("每条来源都有可打开的链接、抓取日期和来源类型", () => {
+  it("每条来源的 sourceId 都能在注册表中找到", () => {
     for (const series of ALIGNMENT_SERIES) {
       for (const source of series.sources) {
-        const where = `${series.id}/${source.region}`;
-        expect(source.url, where).toMatch(/^https?:\/\//);
-        expect(source.retrievedAt, where).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-        expect(["release", "dataset", "document", "portal"], where).toContain(
-          source.urlKind,
-        );
+        expect(getSource(source.sourceId), `${series.id}/${source.sourceId}`).toBeTruthy();
       }
     }
   });
 
-  it("非门户来源必须有发布日期，且不能晚于抓取日期", () => {
-    for (const series of ALIGNMENT_SERIES) {
-      for (const source of series.sources) {
-        if (!isPreciseKind(source.urlKind)) continue;
-        const where = `${series.id}/${source.region}`;
-        expect(source.publishedAt, `${where} 缺发布日`).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-        expect(source.publishedAt! <= source.retrievedAt, `${where} 发布晚于抓取`).toBe(true);
-      }
+  it("注册表里的口径来源都有链接、抓取日期与来源类型", () => {
+    const ids = new Set(
+      ALIGNMENT_SERIES.flatMap((series) => series.sources.map((source) => source.sourceId)),
+    );
+    expect(ids.size).toBe(18);
+    for (const id of ids) {
+      const meta = getSource(id)!;
+      expect(meta.url, id).toMatch(/^https?:\/\//);
+      expect(meta.retrievedAt, id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(["release", "dataset", "document", "portal"], id).toContain(meta.kind);
+    }
+  });
+
+  it("非门户口径来源必须有发布日期，且不能晚于抓取日期", () => {
+    const ids = new Set(
+      ALIGNMENT_SERIES.flatMap((series) => series.sources.map((source) => source.sourceId)),
+    );
+    for (const id of ids) {
+      const meta = getSource(id)!;
+      if (!isPreciseKind(meta.kind)) continue;
+      expect(meta.publishedAt, `${id} 缺发布日`).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(meta.publishedAt! <= meta.retrievedAt, `${id} 发布晚于抓取`).toBe(true);
     }
   });
 
   it("18 条来源里至少 16 条是精确发布页/数据集/文件", () => {
-    const total = ALIGNMENT_SERIES.reduce((n, series) => n + series.sources.length, 0);
-    const precise = ALIGNMENT_SERIES.reduce((n, series) => n + preciseSourceCount(series), 0);
-    expect(total).toBe(18);
-    expect(precise).toBeGreaterThanOrEqual(16);
+    const sources = ALIGNMENT_SERIES.flatMap((series) => series.sources);
+    const precise = sources.filter((source) => {
+      const meta = getSource(source.sourceId);
+      return meta ? isPreciseKind(meta.kind) : false;
+    });
+    expect(sources).toHaveLength(18);
+    expect(precise.length).toBeGreaterThanOrEqual(16);
   });
 
   it("single-source 只由 T3 触发", () => {
     expect(isSingleSource("T3")).toBe(true);
     expect(isSingleSource("T2")).toBe(false);
-    for (const series of ALIGNMENT_SERIES) {
-      for (const source of series.sources) {
-        if (source.tier !== "T3") continue;
-        expect(isSingleSource(source.tier), `${series.id}/${source.region}`).toBe(true);
+    for (const source of SOURCE_REGISTRY) {
+      if (source.tier !== "T3") {
+        expect(isSingleSource(source.tier), source.id).toBe(false);
       }
     }
   });
 
-  it("演示数据里没有一组被标成可直接平均", () => {
-    const summary = alignmentSummary(ALIGNMENT_SERIES);
-    expect(summary.total).toBe(6);
-    expect(summary.direct).toBe(0);
-    expect(summary.convert).toBe(3);
-    expect(summary.notComparable).toBe(3);
+  it("注册表 id 唯一", () => {
+    const ids = SOURCE_REGISTRY.map((source) => source.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });

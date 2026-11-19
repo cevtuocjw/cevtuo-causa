@@ -3,6 +3,9 @@
 这份文件只回答一件事：**页面上每个数字、每条判断、每张截图，来源是什么；还缺什么。**
 所有数值都是 2026-11-19 打开页面核对后的快照，不是实时抓取。
 
+来源的单一事实表是 `src/data/source-registry.json`；口径、扩散、链证据只引用 `sourceId`。
+链接是否还能打开，看 `SOURCE_HEALTH.md`（由 `npm run source:health` 生成，CI 每周跑一次）。
+
 ---
 
 ## 0. 三层来源
@@ -185,31 +188,42 @@
 3. **6 个 T4/T5 样本没有公开链接**：招聘平台、客户邮件、银行 App、本地样本、港口挂靠、港口样本。
    它们只能用于演示，不进量化汇总。
 4. **欧盟 CBAM 正式期只有委员会门户**：没有把实施条例逐条落到 EUR-Lex 单页。
-5. **自动化仍未做**：没有 URL 健康检查、没有 last-modified/重定向监控、没有修订日志。
+5. **健康检查只判链接**：`source:health` 检查 HTTP 状态与登录/WAF 跳转；
+   没有 last-modified 解析、没有修订日志、不判断数值是否被改。
 6. **数值仍是快照**：2026-10/11 的值会修订；页面不做实时刷新。
-7. **部分站点 403/000**：BLS、S&P Global、ECB、广东政府等在本机 `curl` 被反爬或代理挡住；
-   正文已通过搜索索引核对，正式引用前仍需在浏览器人工打开一次。
+7. **9 个来源被反爬挡住**：BLS、S&P、ISM、SEC、海关、Federal Register 在脚本里返回
+   403/412/登录页/WAF 挑战页，已在 `scripts/source-health-allowlist.json` 逐条登记；
+   正文已核对，正式引用前仍需在浏览器人工打开一次。
 
 ---
 
 ## 7. 本轮已做（2026-11-19）
 
-- `AlignmentSource` 增加 `urlKind`、`publishedAt`、`retrievedAt`、`dataset`、`revision`。
-- `DiffusionStep` 增加 `urlKind`、`publishedAt`、`retrievedAt`、`docNumber`、`note`。
-- `SOURCE_META` 增加 `kind`、`url`、`dataset`、`publishedAt`、`retrievedAt`、`revision`、`note`。
+### 7.1 单一来源表
+
+- 新增 `src/data/source-registry.json`：46 条来源，字段为
+  `id / name / publisher / title / url / kind / tier / independence / publishedAt /
+  retrievedAt / dataset / revision / note`。
+- 新增 `src/data/sourceRegistry.ts`：`getSource(id)`，未登记返回 `undefined`，界面显示占位，
+  测试负责报红。
+- 口径、扩散、链证据只引用 `sourceId`；URL、日期、数据集不再在三个数据文件里重复。
+
+### 7.2 健康检查
+
+- `scripts/source-health.mjs`：并发打开注册表里的公开链接，区分
+  `ok / blocked / missing / failed / unreachable / skipped`。
+- 登录页与 WAF 挑战页（ISM SSO、Federal Register unblock）判为 `blocked`，
+  不会因为最终 200 就当成可读。
+- `scripts/source-health-allowlist.json`：9 条已知反爬/登录墙来源，逐条写原因；
+  只容忍 `blocked`，不掩盖 404。
+- `.github/workflows/source-health.yml`：每周一 01:00 UTC + 手动触发，上传
+  `SOURCE_HEALTH.md`。
+- 本机结果：46 条中 31 条 ok、9 条 blocked、6 条样本跳过、0 条 missing/failed。
+  完整表见 `SOURCE_HEALTH.md`。
+
+### 7.3 来源与 UI
+
 - 18 条口径全部换成已核对的官方值 + 精确页；13 步扩散全部补文件号/活动编号。
 - 研究视图显示：来源类型徽标、发布日、抓取日、数据集/修订、`single-source`。
-- 测试强制：每条来源有链接与抓取日；非门户必须有发布日；精确来源数量下限。
+- 测试强制：sourceId 必须存在；非门户必须有发布日；精确来源数量下限；注册表 id 唯一。
 - `npm test` / `npm run build` / `npm run e2e:research` 通过。
-
-### 7.1 URL 连通性（2026-11-19）
-
-本机 `curl` 结果：
-
-- 200：国家统计局各发布页、MEE、gov.cn、Federal Register、Fed、ISM、Eurostat 三个发布页、
-  cneeex、EEX、人民银行公告栏目、上海航交所、FRED、杭州市政府公报、EnterpriseSG ATIGA 文本。
-- 202：EUR-Lex 的 `legal-content` 链接（重定向到 OJ）。
-- 403：BLS、S&P Global PMI、商务部。
-- 000：ECB、S&P DJI、广东省政府、广东省文旅厅、EUR-Lex ELI。
-
-403/000 是反爬或代理问题，不等于页面不存在；已在表中保留并注明“需人工打开确认”。

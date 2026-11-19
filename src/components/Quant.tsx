@@ -38,6 +38,7 @@ import {
   sourceReliability,
 } from "../data/chains";
 import { SOURCE_KIND_LABEL } from "../core/source";
+import { getSource } from "../data/sourceRegistry";
 import { daysBetween, pct, signed, TODAY } from "../lib/format";
 
 export function Tip({
@@ -439,25 +440,30 @@ export function SourceMatrix({ chain }: { chain: Chain }) {
           tier: 5 as const,
           reliability: 60,
           latency: "—",
-          kind: "sample" as const,
+          sourceId: "",
         };
+        const registered = getSource(meta.sourceId);
         return (
           <div className="srow" key={s.name}>
-            <Tip text={`Tier ${meta.tier} · 延迟 ${meta.latency} · ${SOURCE_KIND_LABEL[meta.kind]}`}>
+            <Tip
+              text={`Tier ${meta.tier} · 延迟 ${meta.latency} · ${
+                registered ? SOURCE_KIND_LABEL[registered.kind] : "来源未登记"
+              }`}
+            >
               <span className={`stier t${meta.tier}`}>T{meta.tier}</span>
             </Tip>
-            {meta.url ? (
+            {registered?.url ? (
               <a
                 className="sname"
-                href={meta.url}
+                href={registered.url}
                 target="_blank"
                 rel="noreferrer"
-                title={meta.dataset ?? meta.note}
+                title={registered.dataset ?? registered.note ?? meta.note}
               >
                 {s.name} ↗
               </a>
             ) : (
-              <span className="sname" title={meta.note}>
+              <span className="sname" title={registered?.note ?? meta.note}>
                 {s.name}
               </span>
             )}

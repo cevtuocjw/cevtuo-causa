@@ -1,0 +1,30 @@
+name: source-health
+
+# 来源链接周检：只判断链接是否还能打开，不判断数值是否正确。
+# 403/412/登录页/WAF 挑战页在 scripts/source-health-allowlist.json 中逐条登记；
+# 404 与新的域名失败不会被白名单掩盖。
+on:
+  schedule:
+    - cron: "0 1 * * 1"
+  workflow_dispatch:
+  push:
+    paths:
+      - "src/data/source-registry.json"
+      - "scripts/source-health.mjs"
+      - "scripts/source-health-allowlist.json"
+      - ".github/workflows/source-health.yml"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/source-health.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: source-health
+          path: SOURCE_HEALTH.md

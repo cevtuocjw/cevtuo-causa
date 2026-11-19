@@ -11,14 +11,73 @@ import {
   orderedSources,
   REGION_LABEL,
   type AlignmentSeries,
+  type AlignmentSource,
 } from "../core/alignment";
 import { ALIGNMENT_SERIES } from "../data/alignment";
+import { getSource } from "../data/sourceRegistry";
 import {
   SOURCE_KIND_LABEL,
   SOURCE_KIND_HINT,
   isSingleSource,
 } from "../core/source";
 import type { Chain } from "../core/types";
+
+function RegionCard({ source, unit }: { source: AlignmentSource; unit: string }) {
+  const meta = getSource(source.sourceId);
+  if (!meta) {
+    return (
+      <article className="region-card empty">
+        <div className="region-head">
+          <b>{REGION_LABEL[source.region]}</b>
+          <span className="chip source-single">来源未登记</span>
+        </div>
+        <span className="region-note">{source.sourceId}</span>
+      </article>
+    );
+  }
+
+  return (
+    <article className="region-card">
+      <div className="region-head">
+        <b>{REGION_LABEL[source.region]}</b>
+        <span className="region-badges">
+          <span className="chip">{meta.tier}</span>
+          <span
+            className={`chip source-kind ${meta.kind}`}
+            title={SOURCE_KIND_HINT[meta.kind]}
+          >
+            {SOURCE_KIND_LABEL[meta.kind]}
+          </span>
+          {isSingleSource(meta.tier) ? (
+            <span className="chip source-single">single-source</span>
+          ) : null}
+        </span>
+      </div>
+      <strong className="region-value num">{source.value}</strong>
+      <span className="region-period">
+        {source.period} · {unit}
+      </span>
+      <p>{source.definition}</p>
+      {meta.url ? (
+        <a className="region-source" href={meta.url} target="_blank" rel="noreferrer">
+          <Database size={11} /> {meta.name}
+        </a>
+      ) : (
+        <span className="region-source">
+          <Database size={11} /> {meta.name}（样本，无公开链接）
+        </span>
+      )}
+      <span className="source-meta">
+        {meta.dataset}
+        {meta.revision ? ` · ${meta.revision}` : ""}
+      </span>
+      <span className="source-meta">
+        发布 {meta.publishedAt ?? "—"} · 抓取 {meta.retrievedAt}
+      </span>
+      {source.note ? <span className="region-note">{source.note}</span> : null}
+    </article>
+  );
+}
 
 export function AlignmentView({
   chains,
@@ -78,46 +137,7 @@ export function AlignmentView({
             <div className="align-regions">
               {sources.map((source, index) =>
                 source ? (
-                  <article className="region-card" key={source.region}>
-                    <div className="region-head">
-                      <b>{REGION_LABEL[source.region]}</b>
-                      <span className="region-badges">
-                        <span className="chip">{source.tier}</span>
-                        <span
-                          className={`chip source-kind ${source.urlKind}`}
-                          title={SOURCE_KIND_HINT[source.urlKind]}
-                        >
-                          {SOURCE_KIND_LABEL[source.urlKind]}
-                        </span>
-                        {isSingleSource(source.tier) ? (
-                          <span className="chip source-single">single-source</span>
-                        ) : null}
-                      </span>
-                    </div>
-                    <strong className="region-value num">{source.value}</strong>
-                    <span className="region-period">
-                      {source.period} · {series.unit}
-                    </span>
-                    <p>{source.definition}</p>
-                    <a
-                      className="region-source"
-                      href={source.url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <Database size={11} /> {source.name}
-                    </a>
-                    <span className="source-meta">
-                      {source.dataset ?? "未标数据集"}
-                      {source.revision ? ` · ${source.revision}` : ""}
-                    </span>
-                    <span className="source-meta">
-                      发布 {source.publishedAt ?? "—"} · 抓取 {source.retrievedAt}
-                    </span>
-                    {source.note ? (
-                      <span className="region-note">{source.note}</span>
-                    ) : null}
-                  </article>
+                  <RegionCard key={source.region} source={source} unit={series.unit} />
                 ) : (
                   <article className="region-card empty" key={`empty-${index}`}>
                     <b>{REGION_LABEL[(["CN", "US", "EU"] as const)[index]]}</b>
