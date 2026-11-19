@@ -426,7 +426,17 @@ GIT_ASKPASS=/tmp/causa-askpass.sh GIT_TERMINAL_PROMPT=0 /usr/bin/git push origin
 GitHub Pages 会自动构建；`gh api repos/cevtuocjw/cevtuocjw.github.io/pages/builds/latest`
 可看状态。根目录 `index.html` 已加入 Causa 入口。
 
-### 14.4 分发页的已知限制
+### 14.4 2026-11-19 二次更新（原始构想 + 首页位置）
+
+- 分发页新增 `#origin`：原始 `SPEC.md` 的一句话、Causa 命名、目标用户、
+  “五本账”（01–03 已交付，04–06 未交付/后续）、四条不让步的规则、0.1→0.4 时间线。
+- `apps.cevtuogrnd.com` 根页新增 **featured card**：Causa 预览图、0.4.0 徽标、
+  一句话说明，位于所有条目之前；列表里仍保留一条。
+- 设计检查：按 Grail 版式特征允许 `eyebrow/mono/numbering/...` 后 **0 FAIL**；
+  唯一 `contrast` 项是整页截图对 fixed ground 的静态误报，实际滚动时
+  ground 为 `#f2f0f0`、章节文字为 `#182124`。
+
+### 14.5 分发页的已知限制
 
 - 页面下载的是 GitHub Release 资产，不是 Pages 上的文件；Release 被删会导致链接失效。
 - 视频无音频、无旁白；字幕条在视频内，页面另附逐段文字说明。
