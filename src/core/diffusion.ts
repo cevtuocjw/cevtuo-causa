@@ -18,6 +18,8 @@ export interface DiffusionStep {
   /** 触发条件；没有触发条件就不算下一步。 */
   trigger: string;
   evidence: string;
+  /** 官方文件或门户链接。 */
+  url: string;
   confidence: Confidence;
   status: StepStatus;
 }

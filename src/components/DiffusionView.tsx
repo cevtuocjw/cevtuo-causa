@@ -45,7 +45,11 @@ function StepCard({ step }: { step: DiffusionStep }) {
       <p className="diff-trigger">{step.trigger}</p>
       <div className="diff-evidence">
         <span>证据</span>
-        <p>{step.evidence}</p>
+        <p>
+          <a href={step.url} target="_blank" rel="noreferrer">
+            {step.evidence} ↗
+          </a>
+        </p>
       </div>
     </article>
   );
@@ -255,7 +259,7 @@ export function DiffusionView({
             <p className="side-empty">这个政策暂时没有关联链。</p>
           )}
           <p className="side-note">
-            <GitBranch size={12} /> 扩散路径是本地静态资料，不是实时抓取；新增路径必须同时补证据与触发条件。
+            <GitBranch size={12} /> 扩散路径是本地静态资料，不是实时抓取；来源链接指向官方门户，精确文件与抓取时间待补。
           </p>
         </section>
       </div>

@@ -19,9 +19,9 @@ const direct: AlignmentSeries = {
   gap: "定义一致。",
   rule: "可以平均。",
   sources: [
-    { region: "CN", name: "A", tier: "T1", value: "1", period: "2026-10", definition: "同一口径" },
-    { region: "US", name: "B", tier: "T1", value: "2", period: "2026-10", definition: "同一口径" },
-    { region: "EU", name: "C", tier: "T1", value: "3", period: "2026-10", definition: "同一口径" },
+    { region: "CN", name: "A", tier: "T1", value: "1", period: "2026-10", definition: "同一口径", url: "https://example.com/cn" },
+    { region: "US", name: "B", tier: "T1", value: "2", period: "2026-10", definition: "同一口径", url: "https://example.com/us" },
+    { region: "EU", name: "C", tier: "T1", value: "3", period: "2026-10", definition: "同一口径", url: "https://example.com/eu" },
   ],
 };
 
@@ -65,6 +65,9 @@ describe("口径对齐", () => {
       expect(isFullySourced(series), series.id).toBe(true);
       expect(series.gap.length, series.id).toBeGreaterThan(0);
       expect(series.rule.length, series.id).toBeGreaterThan(0);
+      for (const source of series.sources) {
+        expect(source.url, `${series.id}/${source.region}`).toMatch(/^https?:\/\//);
+      }
     }
   });
 

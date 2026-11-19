@@ -83,9 +83,14 @@ export function AlignmentView({
                       {source.period} · {series.unit}
                     </span>
                     <p>{source.definition}</p>
-                    <span className="region-source">
+                    <a
+                      className="region-source"
+                      href={source.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
                       <Database size={11} /> {source.name}
-                    </span>
+                    </a>
                     {source.note ? (
                       <span className="region-note">{source.note}</span>
                     ) : null}
@@ -163,6 +168,9 @@ export function AlignmentView({
               <p>数字只认 T1 / T2；单一 T3 来源标为 single-source，不进量化汇总。</p>
             </li>
           </ol>
+          <p className="side-note">
+            来源链接指向官方门户；精确发布页、发布日期与抓取时间仍待补。
+          </p>
         </section>
 
         <section className="card">

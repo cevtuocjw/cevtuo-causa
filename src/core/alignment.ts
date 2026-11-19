@@ -8,6 +8,8 @@ export interface AlignmentSource {
   tier: SourceTier;
   value: string;
   period: string;
+  /** 官方门户或数据页；精确发布页仍待补时指向门户。 */
+  url: string;
   /** 这个地区实际统计的是什么。 */
   definition: string;
   note?: string;

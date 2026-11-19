@@ -27,6 +27,7 @@ const sample: DiffusionCase = {
       window: "2026-01",
       trigger: "宣布",
       evidence: "公告",
+      url: "https://example.com/announcement",
       confidence: "high",
       status: "done",
     },
@@ -36,6 +37,7 @@ const sample: DiffusionCase = {
       window: "2027",
       trigger: "草案",
       evidence: "文件",
+      url: "https://example.com/draft",
       confidence: "medium",
       status: "watching",
     },
@@ -45,6 +47,7 @@ const sample: DiffusionCase = {
       window: "2027",
       trigger: "听证",
       evidence: "议案",
+      url: "https://example.com/bill",
       confidence: "low",
       status: "candidate",
     },
@@ -89,6 +92,7 @@ describe("政策扩散", () => {
     for (const item of DIFFUSION_CASES) {
       for (const step of item.steps) {
         expect(hasEvidence(step), `${item.id}/${step.region}`).toBe(true);
+        expect(step.url, `${item.id}/${step.region}`).toMatch(/^https?:\/\//);
       }
     }
   });

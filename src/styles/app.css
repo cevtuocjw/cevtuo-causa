@@ -3662,3 +3662,12 @@ h1 {
     min-width: 0;
   }
 }
+
+.region-source:hover,
+.diff-evidence a:hover {
+  color: var(--accent);
+}
+
+.diff-evidence a {
+  color: inherit;
+}

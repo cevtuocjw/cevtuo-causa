@@ -20,6 +20,7 @@ export const ALIGNMENT_SERIES: AlignmentSeries[] = [
       {
         region: "CN",
         name: "国家统计局 · 中国物流与采购联合会",
+        url: "https://www.stats.gov.cn/",
         tier: "T1",
         value: "50.8",
         period: "2026-10",
@@ -29,6 +30,7 @@ export const ALIGNMENT_SERIES: AlignmentSeries[] = [
       {
         region: "US",
         name: "ISM Manufacturing PMI",
+        url: "https://www.ismworld.org/supply-management-news-and-reports/reports/ism-report-on-business/",
         tier: "T1",
         value: "48.7",
         period: "2026-10",
@@ -38,6 +40,7 @@ export const ALIGNMENT_SERIES: AlignmentSeries[] = [
       {
         region: "EU",
         name: "HCOB / S&P Global Eurozone Manufacturing PMI",
+        url: "https://www.pmi.spglobal.com/",
         tier: "T2",
         value: "47.9",
         period: "2026-10",
@@ -61,6 +64,7 @@ export const ALIGNMENT_SERIES: AlignmentSeries[] = [
       {
         region: "CN",
         name: "国家统计局 CPI",
+        url: "https://www.stats.gov.cn/",
         tier: "T1",
         value: "+0.3%",
         period: "2026-10",
@@ -70,6 +74,7 @@ export const ALIGNMENT_SERIES: AlignmentSeries[] = [
       {
         region: "US",
         name: "BLS CPI-U",
+        url: "https://www.bls.gov/cpi/",
         tier: "T1",
         value: "+3.1%",
         period: "2026-10",
@@ -79,6 +84,7 @@ export const ALIGNMENT_SERIES: AlignmentSeries[] = [
       {
         region: "EU",
         name: "Eurostat HICP",
+        url: "https://ec.europa.eu/eurostat/web/hicp",
         tier: "T1",
         value: "+2.4%",
         period: "2026-10（初值）",
@@ -102,6 +108,7 @@ export const ALIGNMENT_SERIES: AlignmentSeries[] = [
       {
         region: "CN",
         name: "国家统计局 · 城镇调查失业率",
+        url: "https://www.stats.gov.cn/",
         tier: "T1",
         value: "5.1%",
         period: "2026-10",
@@ -111,6 +118,7 @@ export const ALIGNMENT_SERIES: AlignmentSeries[] = [
       {
         region: "US",
         name: "BLS · CPS U-3",
+        url: "https://www.bls.gov/cps/",
         tier: "T1",
         value: "4.3%",
         period: "2026-10",
@@ -120,6 +128,7 @@ export const ALIGNMENT_SERIES: AlignmentSeries[] = [
       {
         region: "EU",
         name: "Eurostat · harmonised unemployment",
+        url: "https://ec.europa.eu/eurostat/web/lfs",
         tier: "T1",
         value: "5.9%",
         period: "2026-09",
@@ -143,6 +152,7 @@ export const ALIGNMENT_SERIES: AlignmentSeries[] = [
       {
         region: "CN",
         name: "中国人民银行 · 7 天逆回购",
+        url: "http://www.pbc.gov.cn/",
         tier: "T1",
         value: "1.40%",
         period: "2026-11",
@@ -152,6 +162,7 @@ export const ALIGNMENT_SERIES: AlignmentSeries[] = [
       {
         region: "US",
         name: "Federal Reserve · fed funds target",
+        url: "https://www.federalreserve.gov/monetarypolicy/openmarket.htm",
         tier: "T1",
         value: "3.75–4.00%",
         period: "2026-11",
@@ -161,6 +172,7 @@ export const ALIGNMENT_SERIES: AlignmentSeries[] = [
       {
         region: "EU",
         name: "ECB · deposit facility rate",
+        url: "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/key_ecb_interest_rates/html/index.en.html",
         tier: "T1",
         value: "2.00%",
         period: "2026-10",
@@ -184,6 +196,7 @@ export const ALIGNMENT_SERIES: AlignmentSeries[] = [
       {
         region: "CN",
         name: "全国碳排放权交易市场",
+        url: "https://www.mee.gov.cn/",
         tier: "T1",
         value: "¥72.5 / t",
         period: "2026-11",
@@ -193,6 +206,7 @@ export const ALIGNMENT_SERIES: AlignmentSeries[] = [
       {
         region: "US",
         name: "无联邦碳价",
+        url: "https://www.epa.gov/ghgemissions",
         tier: "T1",
         value: "—",
         period: "2026-11",
@@ -202,6 +216,7 @@ export const ALIGNMENT_SERIES: AlignmentSeries[] = [
       {
         region: "EU",
         name: "EU ETS · EUA",
+        url: "https://climate.ec.europa.eu/eu-action/eu-emissions-trading-system-eu-ets_en",
         tier: "T1",
         value: "€78.4 / t",
         period: "2026-11",
@@ -225,6 +240,7 @@ export const ALIGNMENT_SERIES: AlignmentSeries[] = [
       {
         region: "CN",
         name: "国家统计局 · 70 城新建商品住宅",
+        url: "https://www.stats.gov.cn/",
         tier: "T1",
         value: "−0.2% 环比",
         period: "2026-10",
@@ -234,6 +250,7 @@ export const ALIGNMENT_SERIES: AlignmentSeries[] = [
       {
         region: "US",
         name: "S&P CoreLogic Case-Shiller",
+        url: "https://www.spglobal.com/spdji/en/indices/real-estate/sp-corelogic-case-shiller-20-city-composite-home-price-indices/",
         tier: "T2",
         value: "+0.4% 环比",
         period: "2026-08",
@@ -243,6 +260,7 @@ export const ALIGNMENT_SERIES: AlignmentSeries[] = [
       {
         region: "EU",
         name: "Eurostat House Price Index",
+        url: "https://ec.europa.eu/eurostat/web/housing-price-statistics",
         tier: "T1",
         value: "+0.6% 环比",
         period: "2026-Q2",
