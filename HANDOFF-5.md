@@ -21,9 +21,12 @@ universal 包已重建，x86_64 切片在 Rosetta 下启动通过。
 ## 1. 版本、提交与工作区
 
 - 版本：**0.4.0**（`package.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml`、设置页 pill）
-- 最近提交：`ec3411a feat(security): encrypted backups, header checks, and 0.3.0 release`
-- 最近 tag：`v0.3.0`
-- **0.4 的代码尚未 commit、尚未打 tag**。工作区改动见 `git status`：
+- 0.4 提交：`beeca3b feat(security): crypto erase, keychain recovery, and 0.4.0 release`
+- tag：`v0.4.0`（已推送 GitHub）
+- 远程：`https://github.com/cevtuocjw/cevtuo-causa`（public）
+- Release：`https://github.com/cevtuocjw/cevtuo-causa/releases/tag/v0.4.0`
+- 分发页：`https://apps.cevtuogrnd.com/causa/`
+- 工作区应是干净的；以下为 0.4 的改动清单（已提交）：
   - 修改：`src-tauri/src/lib.rs`、`src/App.tsx`、`src/core/stats.ts`、`src/core/stats.test.ts`、
     `src/lib/desktop.ts`、`src/styles/app.css`、`src/data/demo.ts`、`vitest.config.ts`、
     `package.json`、`src-tauri/Cargo.toml`、`Cargo.lock`、`tauri.conf.json`、`scripts/release.sh`、
@@ -244,6 +247,7 @@ a32f5c15784feb75d89bc70395e628b09a339a83ec81db0624b912b0cba254e8  zip
 ```
 
 - 0.3.0 的旧产物仍在 `release/`，不要误发。
+- 0.4.0 的 DMG / ZIP / SHA 已上传到 GitHub Release；下载链接见分发页。
 - 未签名、未公证；Gatekeeper 真实首次打开仍未验证。
 
 ---
@@ -379,3 +383,52 @@ cd /Users/cjw/Documents/Codex && python3 -m http.server 8131
   旧账本必须保留原 Keychain 密钥，否则备份也打不开。
 - 不要删除 `src-tauri/target`（重建 SQLCipher/OpenSSL 很慢）。
 - 不要用 0.2 包打开已迁移的 v2 数据库。
+
+
+---
+
+## 14. GitHub 与分发页（2026-11-19 完成）
+
+### 14.1 仓库与 Release
+
+- 源码：`https://github.com/cevtuocjw/cevtuo-causa`（public）
+- 0.4.0 提交：`beeca3b`
+- tag：`v0.4.0`
+- Release：`https://github.com/cevtuocjw/cevtuo-causa/releases/tag/v0.4.0`
+  - `Cevtuo-Causa-0.4.0-macos-universal.dmg`（12,905,193 bytes）
+  - `Cevtuo-Causa-0.4.0-macos-universal.zip`（12,525,045 bytes）
+  - `SHA256SUMS.txt`
+
+### 14.2 分发页
+
+- 地址：`https://apps.cevtuogrnd.com/causa/`
+- 源文件：GitHub Pages 仓库 `cevtuocjw/cevtuocjw.github.io` 的 `causa/`
+- 设计参考：Awwwards SOTD「Grail」（2026-11-04）的固定产品画面 + 章节式排版；
+  8 个章节、浅/深色块切换、左侧章节号、右侧“On this screen”、巨幅背景字。
+- 页面是纯静态：`index.html` + `causa.css` + `causa.js` + `assets/`；
+  没有构建步骤，直接改再 push 即可部署。
+- 录屏：`assets/demo.mp4`，1440×900、H.264、约 51 秒、约 1.9 MB；
+  由 CDP screencast 录真实浏览器界面，字幕条与光标是录制时注入的。
+- 截图：账本、结算、校准、投影、账单、设置、销毁、恢复共 8 组。
+- 页面覆盖：记录与编辑、结算纪律、校准、家庭暴露、CSV、保险箱、加密擦除、
+  Keychain 恢复、平台与分发、明确不做的限制、安装/Gatekeeper、FAQ、SHA。
+
+### 14.3 更新分发页
+
+```bash
+cd /tmp/cevtuo-pages      # sparse clone of cevtuocjw.github.io
+# 修改 causa/ 后：
+/usr/bin/git add --sparse causa
+/usr/bin/git commit -m "update causa page"
+GIT_ASKPASS=/tmp/causa-askpass.sh GIT_TERMINAL_PROMPT=0 /usr/bin/git push origin main
+```
+
+GitHub Pages 会自动构建；`gh api repos/cevtuocjw/cevtuocjw.github.io/pages/builds/latest`
+可看状态。根目录 `index.html` 已加入 Causa 入口。
+
+### 14.4 分发页的已知限制
+
+- 页面下载的是 GitHub Release 资产，不是 Pages 上的文件；Release 被删会导致链接失效。
+- 视频无音频、无旁白；字幕条在视频内，页面另附逐段文字说明。
+- 页面没有中英文切换；当前只有中文。
+- 未做 CMS，所有内容手工维护。

@@ -104,7 +104,7 @@ a32f5c15784feb75d89bc70395e628b09a339a83ec81db0624b912b0cba254e8  Cevtuo-Causa-0
 
 验证方式：`shasum -a 256 -c SHA256SUMS.txt`（在 `release/` 目录内执行）。
 
-仓库已初始化（本地 git，0.4 代码尚未提交/tag，最近 tag 为 `v0.3.0`），尚未配置远程：
+仓库已推送到 GitHub：`https://github.com/cevtuocjw/cevtuo-causa`（public，tag `v0.4.0`）。
 
 ```bash
 cd ~/Documents/Codex/cevtuo-causa
