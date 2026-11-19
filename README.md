@@ -2,14 +2,14 @@
 
 本地优先的因果账本：记录经济推断，到期结算，再投影到每个人的坐标。
 
-**0.4 版**：在 0.3 的账本闭环之上，加入加密擦除、Keychain 异常恢复、备份恢复与
-按类别校准。macOS 原生壳（Tauri 2 + SQLCipher + Keychain）已构建：
+**0.5 版**：在 0.4 的安全与恢复之上，加入“口径对齐”和“政策扩散”两个研究视图：
+同一个数字在中 / 美 / 欧到底统计什么，以及一项政策下一步可能经过哪些阶段。macOS 原生壳（Tauri 2 + SQLCipher + Keychain）已构建：
 数据库文件头是密文、密钥在 Keychain、判定在退出重开后仍然保留。Android 尚未构建。
 
 ## 下载
 
 - 分发页：https://apps.cevtuogrnd.com/causa/
-- GitHub Release：https://github.com/cevtuocjw/cevtuo-causa/releases/tag/v0.4.0
+- GitHub Release：https://github.com/cevtuocjw/cevtuo-causa/releases/tag/v0.5.0
 - 源码：https://github.com/cevtuocjw/cevtuo-causa
 
 下载 `Cevtuo-Causa-0.4.0-macos-universal.dmg` 或 `.zip`，校验 `SHA256SUMS.txt`。

@@ -1,6 +1,6 @@
 # 分发：没有 Apple Developer 账号怎么发
 
-更新时间：2026-11-19 · 版本 0.4.0
+更新时间：2026-11-19 · 版本 0.5.0
 
 ## 决定
 
@@ -29,7 +29,7 @@
 
 ### 方式 A：DMG（推荐）
 
-1. 下载 `Cevtuo-Causa-0.4.0-macos-universal.dmg`；
+1. 下载 `Cevtuo-Causa-0.5.0-macos-universal.dmg`；
 2. 打开，把 `Cevtuo Causa` 拖进 `Applications`；
 3. 第一次打开被拦下后：
    - **macOS 15 Sequoia 及更新**：系统设置 → 隐私与安全性 → 拉到底 → “仍要打开”；
@@ -47,7 +47,7 @@
 ### 校验下载
 
 ```bash
-shasum -a 256 Cevtuo-Causa-0.4.0-macos-universal.dmg
+shasum -a 256 Cevtuo-Causa-0.5.0-macos-universal.dmg
 # 与 release 页里的 SHA256SUMS.txt 对照
 ```
 
@@ -78,16 +78,17 @@ bash scripts/release.sh
 产物在 `release/`：
 
 ```
-Cevtuo-Causa-0.4.0-macos-universal.dmg   12,905,193 bytes
-Cevtuo-Causa-0.4.0-macos-universal.zip   12,525,045 bytes
+Cevtuo-Causa-0.5.0-macos-universal.dmg   12,905,193 bytes
+Cevtuo-Causa-0.5.0-macos-universal.zip   12,525,045 bytes
 SHA256SUMS.txt
 ```
 
-### 当前产物的校验和（2026-11-19 10:15 重建）
+### 当前产物的校验和（2026-11-19 11:24 重建）
 
-0.4.0 包含：0.3 的全部功能，加上加密擦除（删数据库 / 备份 / Keychain 密钥）、
-Keychain 异常恢复（缺密钥 / 锁定 / 权限拒绝 / 密钥不匹配）、备份恢复、
-校准按标签筛选、SQLite `user_version` 结构版本。
+0.5.0 包含：0.4 的安全与恢复，加上两个研究视图：
+- 口径对齐：6 组指标 × 中 / 美 / 欧，逐项列定义、来源与可比性；冲突不取平均。
+- 政策扩散：3 个政策 × 5 个阶段，区分已发生 / 观察中 / 可能下一站；每一步必须带证据与触发条件。
+- 两个视图都能跳回相关链条。
 
 验证记录（2026-11-19）：
 - Apple Silicon：release 包启动、演示库加载、设置页 0.4.0、手动加密备份通过。
@@ -98,13 +99,13 @@ Keychain 异常恢复（缺密钥 / 锁定 / 权限拒绝 / 密钥不匹配）�
 - 签名：`Signature=adhoc`，`TeamIdentifier=not set`。
 
 ```
-a32f5c15784feb75d89bc70395e628b09a339a83ec81db0624b912b0cba254e8  Cevtuo-Causa-0.4.0-macos-universal.zip
-633d8ab13d554b4a8b4f61cc6823df3908b4ba664e9194fd7d4b0b7747ef6624  Cevtuo-Causa-0.4.0-macos-universal.dmg
+c73d5419c6d2b642ce66b9172a8ca66d1312503cb523bfde2495b795fc45efee  Cevtuo-Causa-0.5.0-macos-universal.zip
+bdf8c7f692dcda052cdfad91914fd9dd071bbe01b8a832a8decbcb4336064a18  Cevtuo-Causa-0.5.0-macos-universal.dmg
 ```
 
 验证方式：`shasum -a 256 -c SHA256SUMS.txt`（在 `release/` 目录内执行）。
 
-仓库已推送到 GitHub：`https://github.com/cevtuocjw/cevtuo-causa`（public，tag `v0.4.0`）。
+仓库已推送到 GitHub：`https://github.com/cevtuocjw/cevtuo-causa`（public，tag `v0.5.0`）。
 
 ```bash
 cd ~/Documents/Codex/cevtuo-causa
@@ -114,8 +115,8 @@ gh repo create cevtuo-causa --public --source=. --remote=origin --push
 发布到 GitHub：
 
 ```bash
-gh release create v0.4.0 release/* \
-  --title "Cevtuo Causa 0.4.0" \
+gh release create v0.5.0 release/* \
+  --title "Cevtuo Causa 0.5.0" \
   --notes-file release/RELEASE-NOTES.md
 ```
 

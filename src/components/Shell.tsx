@@ -5,6 +5,8 @@ import {
   BookOpen,
   Lock,
   RefreshCw,
+  Route,
+  Ruler,
   Scale,
   Search,
   Settings,
@@ -15,12 +17,14 @@ import { CADENCE } from "../data/chains";
 import { Mark } from "./Icon";
 import { RefreshPanel } from "./Quant";
 
-export type View = "ledger" | "projection" | "calibration";
+export type View = "ledger" | "projection" | "calibration" | "alignment" | "diffusion";
 
 const NAV: { id: View; label: string; icon: LucideIcon }[] = [
   { id: "ledger", label: "账本", icon: BookOpen },
   { id: "projection", label: "投影", icon: Target },
   { id: "calibration", label: "校准", icon: Scale },
+  { id: "alignment", label: "口径", icon: Ruler },
+  { id: "diffusion", label: "扩散", icon: Route },
 ];
 
 export function IconRail({

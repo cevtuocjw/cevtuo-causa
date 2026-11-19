@@ -30,6 +30,8 @@ import { SettleDialog } from "./components/SettleDialog";
 import { FirstRunDialog } from "./components/FirstRunDialog";
 import { DestroyDataDialog } from "./components/DestroyDataDialog";
 import { VaultRecovery } from "./components/VaultRecovery";
+import { AlignmentView } from "./components/AlignmentView";
+import { DiffusionView } from "./components/DiffusionView";
 import { IconRail, TopBar, type View } from "./components/Shell";
 import {
   BriefingStrip,
@@ -101,6 +103,8 @@ const VIEW_TITLE: Record<View, string> = {
   ledger: "账本",
   projection: "投影",
   calibration: "校准",
+  alignment: "口径",
+  diffusion: "扩散",
 };
 
 function useScramble(value: number, nonce = 0): string {
@@ -803,6 +807,18 @@ export default function App() {
         命中 {rateText} · Brier {brierText} · 误差 {eceText} · 样本 {sampleSize}
       </span>
     );
+  } else if (view === "alignment") {
+    finding = (
+      <span className="finding-line">
+        6 组指标 · 3 个地区 · 名称相同不等于口径相同
+      </span>
+    );
+  } else if (view === "diffusion") {
+    finding = (
+      <span className="finding-line">
+        3 个政策 · 5 个阶段 · 情景不是预测
+      </span>
+    );
   }
 
   const queueCard = (
@@ -1243,6 +1259,26 @@ export default function App() {
               </div>
             ) : null}
 
+            {view === "alignment" ? (
+              <AlignmentView
+                chains={state.chains}
+                onOpenChain={(id) => {
+                  selectChain(id);
+                  setView("ledger");
+                }}
+              />
+            ) : null}
+
+            {view === "diffusion" ? (
+              <DiffusionView
+                chains={state.chains}
+                onOpenChain={(id) => {
+                  selectChain(id);
+                  setView("ledger");
+                }}
+              />
+            ) : null}
+
           </main>
 
         </div>
@@ -1541,7 +1577,7 @@ export default function App() {
                 <h2>
                   <Settings size={16} /> 设置
                 </h2>
-                <span className="pill">0.4.0</span>
+                <span className="pill">0.5.0</span>
               </div>
               <div className="dialog-rows">
                 <div>
