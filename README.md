@@ -9,7 +9,7 @@
 ## 下载
 
 - 分发页：https://apps.cevtuogrnd.com/causa/
-- GitHub Release：https://github.com/cevtuocjw/cevtuo-causa/releases/tag/v0.5.0
+- GitHub Release：https://github.com/cevtuocjw/cevtuo-causa/releases/tag/v0.5.1
 - 源码：https://github.com/cevtuocjw/cevtuo-causa
 
 下载 `Cevtuo-Causa-0.4.0-macos-universal.dmg` 或 `.zip`，校验 `SHA256SUMS.txt`。

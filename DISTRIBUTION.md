@@ -108,8 +108,12 @@ b2db7bed8360d55c1f539a573098922211620521c2f5937c98d9347c895edca8  Cevtuo-Causa-0
 
 验证方式：`shasum -a 256 -c SHA256SUMS.txt`（在 `release/` 目录内执行）。
 
-仓库：`https://github.com/cevtuocjw/cevtuo-causa`（public）。0.5.1 的 tag / Release
-**尚未创建**；本地产物已生成，等待确认后再发布。
+仓库：`https://github.com/cevtuocjw/cevtuo-causa`（public）。
+
+- tag：`v0.5.1`
+- Release：https://github.com/cevtuocjw/cevtuo-causa/releases/tag/v0.5.1
+- 分发页：https://apps.cevtuogrnd.com/causa/ （已显示 0.5.1）
+- 本机 `/Applications/Cevtuo Causa.app` 已替换为 0.5.1。
 
 ```bash
 cd ~/Documents/Codex/cevtuo-causa

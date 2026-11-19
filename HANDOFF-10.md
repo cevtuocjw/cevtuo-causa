@@ -1,7 +1,7 @@
-# Cevtuo Causa 交接（0.5.1 已本地构建，未发布，2026-11-19）
+# Cevtuo Causa 交接（0.5.1 构建记录，发布已完成，见 HANDOFF-11，2026-11-19）
 
 P0 见 `HANDOFF-8.md`，P1 见 `HANDOFF-9.md`。本文件记录 0.5.1 的版本号、
-本地产物与验证状态；**对外发布动作尚未执行**。
+本地产物与验证状态；发布动作已完成，结果见 `HANDOFF-11.md`。
 
 ---
 
@@ -9,7 +9,7 @@ P0 见 `HANDOFF-8.md`，P1 见 `HANDOFF-9.md`。本文件记录 0.5.1 的版本�
 
 **0.5.1 已在本机构建并验证**：universal `.dmg` / `.zip` 在 `release/`，
 bundle 版本 0.5.1，`x86_64 arm64`，ad-hoc 签名通过。
-**还没打 tag、没建 GitHub Release、没改分发页、没替换 `/Applications`。**
+**发布已于同日完成：见 `HANDOFF-11.md`。本文件保留构建与验证记录。**
 
 ---
 
@@ -55,7 +55,7 @@ b2db7bed8360d55c1f539a573098922211620521c2f5937c98d9347c895edca8  Cevtuo-Causa-0
 
 ---
 
-## 2. 还没做（需要确认的对外动作）
+## 2. 发布动作（已完成，记录用）
 
 1. `git tag v0.5.1 && git push origin main --tags`
 2. `gh release create v0.5.1 release/* --title "Cevtuo Causa 0.5.1" --notes-file release/RELEASE-NOTES.md`
