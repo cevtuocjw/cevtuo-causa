@@ -1577,7 +1577,7 @@ export default function App() {
                 <h2>
                   <Settings size={16} /> 设置
                 </h2>
-                <span className="pill">0.5.0</span>
+                <span className="pill">0.5.1</span>
               </div>
               <div className="dialog-rows">
                 <div>

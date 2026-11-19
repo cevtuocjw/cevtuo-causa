@@ -1,6 +1,6 @@
 [package]
 name = "cevtuo-causa"
-version = "0.5.0"
+version = "0.5.1"
 description = "Cevtuo Causa — local-first causal ledger"
 authors = ["Cevtuo"]
 license = "MIT"

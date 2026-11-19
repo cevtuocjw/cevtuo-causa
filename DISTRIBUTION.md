@@ -1,6 +1,6 @@
 # 分发：没有 Apple Developer 账号怎么发
 
-更新时间：2026-11-19 · 版本 0.5.0
+更新时间：2026-11-19 · 版本 0.5.1
 
 ## 决定
 
@@ -29,7 +29,7 @@
 
 ### 方式 A：DMG（推荐）
 
-1. 下载 `Cevtuo-Causa-0.5.0-macos-universal.dmg`；
+1. 下载 `Cevtuo-Causa-0.5.1-macos-universal.dmg`；
 2. 打开，把 `Cevtuo Causa` 拖进 `Applications`；
 3. 第一次打开被拦下后：
    - **macOS 15 Sequoia 及更新**：系统设置 → 隐私与安全性 → 拉到底 → “仍要打开”；
@@ -47,7 +47,7 @@
 ### 校验下载
 
 ```bash
-shasum -a 256 Cevtuo-Causa-0.5.0-macos-universal.dmg
+shasum -a 256 Cevtuo-Causa-0.5.1-macos-universal.dmg
 # 与 release 页里的 SHA256SUMS.txt 对照
 ```
 
@@ -78,34 +78,38 @@ bash scripts/release.sh
 产物在 `release/`：
 
 ```
-Cevtuo-Causa-0.5.0-macos-universal.dmg   12,905,193 bytes
-Cevtuo-Causa-0.5.0-macos-universal.zip   12,525,045 bytes
+Cevtuo-Causa-0.5.1-macos-universal.dmg   12,933,439 bytes
+Cevtuo-Causa-0.5.1-macos-universal.zip   12,556,704 bytes
 SHA256SUMS.txt
 ```
 
-### 当前产物的校验和（2026-11-19 11:24 重建）
+### 当前产物的校验和（2026-11-19 14:20 重建）
 
-0.5.0 包含：0.4 的安全与恢复，加上两个研究视图：
-- 口径对齐：6 组指标 × 中 / 美 / 欧，逐项列定义、来源与可比性；冲突不取平均。
-- 政策扩散：3 个政策 × 5 个阶段，区分已发生 / 观察中 / 可能下一站；每一步必须带证据与触发条件。
-- 两个视图都能跳回相关链条。
+0.5.1 包含：
+- 来源注册表：46 条来源集中到 `src/data/source-registry.json`，口径 / 扩散 / 链证据只引用 `sourceId`。
+- 口径与扩散数字改为 2026-10/11 官方发布值，补精确发布页、发布日期、抓取时间、数据集 / 文号。
+- 研究视图显示来源类型、发布日、抓取日与 `single-source`。
+- 来源健康检查：`npm run source:health` + CI 周检，结果写入 `SOURCE_HEALTH.md`。
+- 0.5 的口径对齐、政策扩散与 0.4 的安全 / 恢复继续保留。
 
 验证记录（2026-11-19）：
-- Apple Silicon：release 包启动、演示库加载、设置页 0.4.0、手动加密备份通过。
-- x86_64 slice：用 `arch -x86_64` 在 Rosetta 下启动，`vmmap` 显示
-  `Code Type: X86-64 (translated)`，界面与数据库读取正常。**不是 Intel 真机**。
-- Gatekeeper：`spctl --assess` 显示 `accepted`，但同时打印
-  `override=security disabled`；本机 Gatekeeper 关闭，**不能**证明下载用户能打开。
-- 签名：`Signature=adhoc`，`TeamIdentifier=not set`。
+- bundle `CFBundleShortVersionString` / `CFBundleVersion` = 0.5.1。
+- 架构：`lipo -archs` 显示 `x86_64 arm64`。
+- 签名：`codesign --verify --deep --strict` 通过；`Signature=adhoc`，`TeamIdentifier=not set`。
+- Gatekeeper：本机 Gatekeeper 关闭，`spctl` 结果**不能**证明下载用户能打开。
+- 未做：Intel 真机启动、真实 Gatekeeper 拦截、公证。
+- 构建前验证：`npm test` 92 tests、`cargo test` 7 tests、`npm run build`、
+  `npm run e2e` / `e2e:m3` / `e2e:research`、`npm run source:health` 全部通过。
 
 ```
-c73d5419c6d2b642ce66b9172a8ca66d1312503cb523bfde2495b795fc45efee  Cevtuo-Causa-0.5.0-macos-universal.zip
-bdf8c7f692dcda052cdfad91914fd9dd071bbe01b8a832a8decbcb4336064a18  Cevtuo-Causa-0.5.0-macos-universal.dmg
+90b95e3cdc977a418e0842639621d5203e8d47f3cf911f4f990f46eca6428ea8  Cevtuo-Causa-0.5.1-macos-universal.zip
+b2db7bed8360d55c1f539a573098922211620521c2f5937c98d9347c895edca8  Cevtuo-Causa-0.5.1-macos-universal.dmg
 ```
 
 验证方式：`shasum -a 256 -c SHA256SUMS.txt`（在 `release/` 目录内执行）。
 
-仓库已推送到 GitHub：`https://github.com/cevtuocjw/cevtuo-causa`（public，tag `v0.5.0`）。
+仓库：`https://github.com/cevtuocjw/cevtuo-causa`（public）。0.5.1 的 tag / Release
+**尚未创建**；本地产物已生成，等待确认后再发布。
 
 ```bash
 cd ~/Documents/Codex/cevtuo-causa
@@ -115,8 +119,10 @@ gh repo create cevtuo-causa --public --source=. --remote=origin --push
 发布到 GitHub：
 
 ```bash
-gh release create v0.5.0 release/* \
-  --title "Cevtuo Causa 0.5.0" \
+git tag v0.5.1
+git push origin main --tags
+gh release create v0.5.1 release/* \
+  --title "Cevtuo Causa 0.5.1" \
   --notes-file release/RELEASE-NOTES.md
 ```
 
