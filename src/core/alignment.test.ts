@@ -5,9 +5,24 @@ import {
   canAverage,
   isFullySourced,
   orderedSources,
+  preciseSourceCount,
   type AlignmentSeries,
 } from "./alignment";
+import { isPreciseKind, isSingleSource } from "./source";
 import { ALIGNMENT_SERIES } from "../data/alignment";
+
+const CN_SOURCE = {
+  region: "CN",
+  name: "A",
+  tier: "T1",
+  value: "1",
+  period: "2026-10",
+  definition: "同一口径",
+  url: "https://example.com/cn",
+  urlKind: "release",
+  publishedAt: "2026-10-31",
+  retrievedAt: "2026-11-19",
+} as const;
 
 const direct: AlignmentSeries = {
   id: "direct",
@@ -19,9 +34,9 @@ const direct: AlignmentSeries = {
   gap: "定义一致。",
   rule: "可以平均。",
   sources: [
-    { region: "CN", name: "A", tier: "T1", value: "1", period: "2026-10", definition: "同一口径", url: "https://example.com/cn" },
-    { region: "US", name: "B", tier: "T1", value: "2", period: "2026-10", definition: "同一口径", url: "https://example.com/us" },
-    { region: "EU", name: "C", tier: "T1", value: "3", period: "2026-10", definition: "同一口径", url: "https://example.com/eu" },
+    CN_SOURCE,
+    { ...CN_SOURCE, region: "US", name: "B", value: "2", url: "https://example.com/us" },
+    { ...CN_SOURCE, region: "EU", name: "C", value: "3", url: "https://example.com/eu" },
   ],
 };
 
@@ -65,8 +80,47 @@ describe("口径对齐", () => {
       expect(isFullySourced(series), series.id).toBe(true);
       expect(series.gap.length, series.id).toBeGreaterThan(0);
       expect(series.rule.length, series.id).toBeGreaterThan(0);
+    }
+  });
+
+  it("每条来源都有可打开的链接、抓取日期和来源类型", () => {
+    for (const series of ALIGNMENT_SERIES) {
       for (const source of series.sources) {
-        expect(source.url, `${series.id}/${source.region}`).toMatch(/^https?:\/\//);
+        const where = `${series.id}/${source.region}`;
+        expect(source.url, where).toMatch(/^https?:\/\//);
+        expect(source.retrievedAt, where).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        expect(["release", "dataset", "document", "portal"], where).toContain(
+          source.urlKind,
+        );
+      }
+    }
+  });
+
+  it("非门户来源必须有发布日期，且不能晚于抓取日期", () => {
+    for (const series of ALIGNMENT_SERIES) {
+      for (const source of series.sources) {
+        if (!isPreciseKind(source.urlKind)) continue;
+        const where = `${series.id}/${source.region}`;
+        expect(source.publishedAt, `${where} 缺发布日`).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        expect(source.publishedAt! <= source.retrievedAt, `${where} 发布晚于抓取`).toBe(true);
+      }
+    }
+  });
+
+  it("18 条来源里至少 16 条是精确发布页/数据集/文件", () => {
+    const total = ALIGNMENT_SERIES.reduce((n, series) => n + series.sources.length, 0);
+    const precise = ALIGNMENT_SERIES.reduce((n, series) => n + preciseSourceCount(series), 0);
+    expect(total).toBe(18);
+    expect(precise).toBeGreaterThanOrEqual(16);
+  });
+
+  it("single-source 只由 T3 触发", () => {
+    expect(isSingleSource("T3")).toBe(true);
+    expect(isSingleSource("T2")).toBe(false);
+    for (const series of ALIGNMENT_SERIES) {
+      for (const source of series.sources) {
+        if (source.tier !== "T3") continue;
+        expect(isSingleSource(source.tier), `${series.id}/${source.region}`).toBe(true);
       }
     }
   });

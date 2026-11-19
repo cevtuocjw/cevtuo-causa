@@ -13,6 +13,11 @@ import {
   type AlignmentSeries,
 } from "../core/alignment";
 import { ALIGNMENT_SERIES } from "../data/alignment";
+import {
+  SOURCE_KIND_LABEL,
+  SOURCE_KIND_HINT,
+  isSingleSource,
+} from "../core/source";
 import type { Chain } from "../core/types";
 
 export function AlignmentView({
@@ -76,7 +81,18 @@ export function AlignmentView({
                   <article className="region-card" key={source.region}>
                     <div className="region-head">
                       <b>{REGION_LABEL[source.region]}</b>
-                      <span className="chip">{source.tier}</span>
+                      <span className="region-badges">
+                        <span className="chip">{source.tier}</span>
+                        <span
+                          className={`chip source-kind ${source.urlKind}`}
+                          title={SOURCE_KIND_HINT[source.urlKind]}
+                        >
+                          {SOURCE_KIND_LABEL[source.urlKind]}
+                        </span>
+                        {isSingleSource(source.tier) ? (
+                          <span className="chip source-single">single-source</span>
+                        ) : null}
+                      </span>
                     </div>
                     <strong className="region-value num">{source.value}</strong>
                     <span className="region-period">
@@ -91,6 +107,13 @@ export function AlignmentView({
                     >
                       <Database size={11} /> {source.name}
                     </a>
+                    <span className="source-meta">
+                      {source.dataset ?? "未标数据集"}
+                      {source.revision ? ` · ${source.revision}` : ""}
+                    </span>
+                    <span className="source-meta">
+                      发布 {source.publishedAt ?? "—"} · 抓取 {source.retrievedAt}
+                    </span>
                     {source.note ? (
                       <span className="region-note">{source.note}</span>
                     ) : null}
@@ -169,7 +192,8 @@ export function AlignmentView({
             </li>
           </ol>
           <p className="side-note">
-            来源链接指向官方门户；精确发布页、发布日期与抓取时间仍待补。
+            每张来源卡都标出发布页 / 数据集 / 门户 / 样本。门户只表示机构入口，
+            没有精确文件页时不当作已核实到数字；抓取日期与发布日分开写。
           </p>
         </section>
 

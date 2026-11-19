@@ -1,5 +1,6 @@
 import { clamp, daysBetween, TODAY } from "../lib/format";
 import { CALIBRATION_BUCKETS, calibration as coreCalibration } from "../core/stats";
+import type { SourceKind } from "../core/source";
 import type { Exposure } from "../core/types";
 
 export type Outcome = "hit" | "miss" | "insufficient";
@@ -524,27 +525,194 @@ export interface SourceMeta {
   tier: 1 | 2 | 3 | 4 | 5;
   reliability: number;
   latency: string;
+  kind: SourceKind;
+  /** 精确页、数据集或门户；样本类没有公开链接。 */
+  url?: string;
+  dataset?: string;
+  publishedAt?: string;
+  retrievedAt?: string;
+  revision?: string;
+  note?: string;
 }
 
+const RETRIEVED = "2026-11-19";
+
 export const SOURCE_META: Record<string, SourceMeta> = {
-  国家统计局: { tier: 1, reliability: 98, latency: "T+31d" },
-  上海航交所: { tier: 1, reliability: 95, latency: "T+1d" },
-  招聘平台样本: { tier: 5, reliability: 62, latency: "T+1d" },
-  "EU ETS": { tier: 1, reliability: 97, latency: "T+1d" },
-  海关样本: { tier: 1, reliability: 96, latency: "T+1d" },
-  客户邮件样本: { tier: 5, reliability: 55, latency: "T+7d" },
-  FRED: { tier: 1, reliability: 99, latency: "T+1d" },
-  中国人民银行: { tier: 1, reliability: 98, latency: "T+0d" },
-  "银行 App 样本": { tier: 4, reliability: 70, latency: "T+3d" },
-  地方商务局: { tier: 1, reliability: 95, latency: "T+7d" },
-  本地样本: { tier: 5, reliability: 60, latency: "T+3d" },
-  港口挂靠样本: { tier: 5, reliability: 65, latency: "T+2d" },
-  港口样本: { tier: 4, reliability: 72, latency: "T+2d" },
-  公司财报: { tier: 2, reliability: 94, latency: "T+45d" },
-  地方电网: { tier: 1, reliability: 92, latency: "T+7d" },
-  云厂商价目: { tier: 2, reliability: 90, latency: "T+1d" },
-  欧盟公报: { tier: 1, reliability: 98, latency: "T+0d" },
-  Eurostat: { tier: 1, reliability: 98, latency: "T+30d" },
+  国家统计局: {
+    tier: 1,
+    reliability: 98,
+    latency: "T+31d",
+    kind: "portal",
+    url: "https://www.stats.gov.cn/sj/",
+    dataset: "国家数据 · 月度数据（按指标取表）",
+    retrievedAt: RETRIEVED,
+    note: "链证据按指标组合引用；具体发布页见口径对齐的 18 条来源。",
+  },
+  上海航交所: {
+    tier: 1,
+    reliability: 95,
+    latency: "T+1d",
+    kind: "dataset",
+    url: "https://www.sse.net.cn/index/singleIndex?indexType=scfi",
+    dataset: "SCFI 上海出口集装箱运价指数（综合指数）",
+    publishedAt: "2026-11-13",
+    retrievedAt: RETRIEVED,
+    revision: "周度指数；本期综合 3572.33，上期 3633.45",
+    note: "航线与箱型口径以当期指数页为准。",
+  },
+  招聘平台样本: {
+    tier: 5,
+    reliability: 62,
+    latency: "T+1d",
+    kind: "sample",
+    retrievedAt: RETRIEVED,
+    note: "演示样本，无公开链接；样本量与去重方法未披露。",
+  },
+  "EU ETS": {
+    tier: 1,
+    reliability: 97,
+    latency: "T+1d",
+    kind: "dataset",
+    url: "https://public.eex-group.com/eex/eua-auction-report/",
+    dataset: "EEX EUA Primary Auction Spot Report 2026",
+    publishedAt: "2026-11-17",
+    retrievedAt: RETRIEVED,
+    revision: "当日拍卖结果",
+    note: "现货拍卖清算价；期货结算价不是同一个数。",
+  },
+  海关样本: {
+    tier: 1,
+    reliability: 96,
+    latency: "T+1d",
+    kind: "portal",
+    url: "http://www.customs.gov.cn/",
+    dataset: "海关统计月度数据",
+    retrievedAt: RETRIEVED,
+    note: "HS 编码范围需按货物单独核对。",
+  },
+  客户邮件样本: {
+    tier: 5,
+    reliability: 55,
+    latency: "T+7d",
+    kind: "sample",
+    retrievedAt: RETRIEVED,
+    note: "演示样本，无公开链接；已脱敏，不能复核客户原话。",
+  },
+  FRED: {
+    tier: 1,
+    reliability: 99,
+    latency: "T+1d",
+    kind: "dataset",
+    url: "https://fred.stlouisfed.org/series/MORTGAGE30US",
+    dataset: "MORTGAGE30US（30 年期固定房贷利率）",
+    publishedAt: "2026-11-12",
+    retrievedAt: RETRIEVED,
+    revision: "周度序列；最近值 7.11%（2026-11-12）",
+    note: "同一链还用到 DFF；series ID 必须逐条写，不能只写 FRED。",
+  },
+  中国人民银行: {
+    tier: 1,
+    reliability: 98,
+    latency: "T+0d",
+    kind: "portal",
+    url: "http://www.pbc.gov.cn/zhengcehuobisi/125207/125213/125431/125475/index.html",
+    dataset: "公开市场业务公告",
+    retrievedAt: RETRIEVED,
+    note: "2026-11-02 起隔夜逆回购为主要政策利率（1.25%）。",
+  },
+  "银行 App 样本": {
+    tier: 4,
+    reliability: 70,
+    latency: "T+3d",
+    kind: "sample",
+    retrievedAt: RETRIEVED,
+    note: "演示样本，无公开链接；数据授权与口径未披露。",
+  },
+  地方商务局: {
+    tier: 1,
+    reliability: 95,
+    latency: "T+7d",
+    kind: "release",
+    url: "https://whly.gd.gov.cn/news_newtpxw/content/post_4954284.html",
+    dataset: "广东省文旅消费券公告（示例）",
+    publishedAt: "2026-09-10",
+    retrievedAt: RETRIEVED,
+    note: "不同城市公告分散；这里链接的是已核对的广东公告。",
+  },
+  本地样本: {
+    tier: 5,
+    reliability: 60,
+    latency: "T+3d",
+    kind: "sample",
+    retrievedAt: RETRIEVED,
+    note: "演示样本，无公开链接；采集方法与样本量未披露。",
+  },
+  港口挂靠样本: {
+    tier: 5,
+    reliability: 65,
+    latency: "T+2d",
+    kind: "sample",
+    retrievedAt: RETRIEVED,
+    note: "演示样本，无公开链接；船期与挂靠数据源未披露。",
+  },
+  港口样本: {
+    tier: 4,
+    reliability: 72,
+    latency: "T+2d",
+    kind: "sample",
+    retrievedAt: RETRIEVED,
+    note: "演示样本，无公开链接；港口范围与口径未披露。",
+  },
+  公司财报: {
+    tier: 2,
+    reliability: 94,
+    latency: "T+45d",
+    kind: "portal",
+    url: "https://www.sec.gov/edgar/search/",
+    dataset: "SEC EDGAR 10-K / 10-Q",
+    retrievedAt: RETRIEVED,
+    note: "必须补公司、报告期与页码；只有门户不算核实到数字。",
+  },
+  地方电网: {
+    tier: 1,
+    reliability: 92,
+    latency: "T+7d",
+    kind: "portal",
+    url: "https://www.ndrc.gov.cn/",
+    dataset: "省级电价文件（发改委/电网）",
+    retrievedAt: RETRIEVED,
+    note: "电价文件按省发布；这里只给国家发改委门户。",
+  },
+  云厂商价目: {
+    tier: 2,
+    reliability: 90,
+    latency: "T+1d",
+    kind: "portal",
+    url: "https://aws.amazon.com/pricing/",
+    dataset: "AWS 公开价目（示例）",
+    retrievedAt: RETRIEVED,
+    note: "价目页随区域与实例变化；必须记录抓取时间与区域。",
+  },
+  欧盟公报: {
+    tier: 1,
+    reliability: 98,
+    latency: "T+0d",
+    kind: "portal",
+    url: "https://eur-lex.europa.eu/",
+    dataset: "EUR-Lex Official Journal",
+    retrievedAt: RETRIEVED,
+    note: "具体法规用 ELI 链接；见扩散证据。",
+  },
+  Eurostat: {
+    tier: 1,
+    reliability: 98,
+    latency: "T+30d",
+    kind: "portal",
+    url: "https://ec.europa.eu/eurostat/databrowser/",
+    dataset: "Eurostat Data Browser",
+    retrievedAt: RETRIEVED,
+    note: "具体数据集代码见口径对齐与扩散证据。",
+  },
 };
 
 export const CADENCE = [

@@ -24,7 +24,7 @@ const js = async (expression) => {
   if (r.result?.exceptionDetails) throw new Error(JSON.stringify(r.result.exceptionDetails.exception));
   return r.result?.result?.value;
 };
-const waitFor = async (expr, label, ms = 12000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await js(expr)) return; await new Promise(r => setTimeout(r, 150)); } throw new Error("timeout " + label); };
+const waitFor = async (expr, label, ms = 12000) => { const t = Date.now(); while (Date.now() - t < ms) { try { if (await js(expr)) return; } catch { /* 页面还没建好 body，继续等，不要伪装成断言失败 */ } await new Promise(r => setTimeout(r, 150)); } throw new Error("timeout " + label); };
 const click = (expr) => js(`(() => { const b = ${expr}; if (!b) return false; b.click(); return true; })()`);
 const shot = async (p) => { const s = await send("Page.captureScreenshot", { format: "png" }); writeFileSync(p, Buffer.from(s.result.data, "base64")); };
 

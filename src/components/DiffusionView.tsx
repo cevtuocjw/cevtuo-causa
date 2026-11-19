@@ -20,6 +20,7 @@ import {
   type DiffusionStep,
 } from "../core/diffusion";
 import { DIFFUSION_CASES } from "../data/diffusion";
+import { SOURCE_KIND_LABEL, SOURCE_KIND_HINT } from "../core/source";
 import type { Chain } from "../core/types";
 
 const CONFIDENCE_TONE: Record<Confidence, "positive" | "warning" | "negative"> = {
@@ -36,8 +37,16 @@ function StepCard({ step }: { step: DiffusionStep }) {
         <span className="diff-region">
           <MapPin size={11} /> {step.region}
         </span>
-        <span className={`pill ${CONFIDENCE_TONE[step.confidence]}`}>
-          {CONFIDENCE_LABEL[step.confidence]}置信
+        <span className="region-badges">
+          <span
+            className={`chip source-kind ${step.urlKind}`}
+            title={SOURCE_KIND_HINT[step.urlKind]}
+          >
+            {SOURCE_KIND_LABEL[step.urlKind]}
+          </span>
+          <span className={`pill ${CONFIDENCE_TONE[step.confidence]}`}>
+            {CONFIDENCE_LABEL[step.confidence]}置信
+          </span>
         </span>
       </div>
       <div className="diff-stage">{STAGE_LABEL[step.stage]}</div>
@@ -50,6 +59,13 @@ function StepCard({ step }: { step: DiffusionStep }) {
             {step.evidence} ↗
           </a>
         </p>
+        {step.docNumber ? (
+          <span className="source-meta">{step.docNumber}</span>
+        ) : null}
+        <span className="source-meta">
+          发布 {step.publishedAt ?? "—"} · 抓取 {step.retrievedAt}
+        </span>
+        {step.note ? <span className="source-meta">{step.note}</span> : null}
       </div>
     </article>
   );
@@ -259,7 +275,8 @@ export function DiffusionView({
             <p className="side-empty">这个政策暂时没有关联链。</p>
           )}
           <p className="side-note">
-            <GitBranch size={12} /> 扩散路径是本地静态资料，不是实时抓取；来源链接指向官方门户，精确文件与抓取时间待补。
+            <GitBranch size={12} /> 扩散路径是本地静态资料，不是实时抓取。每步标出文件号、
+            发布日期与抓取日期；“门户”表示精确文件页尚未定位。
           </p>
         </section>
       </div>

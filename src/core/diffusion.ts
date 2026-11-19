@@ -1,3 +1,5 @@
+import type { SourceKind } from "./source";
+
 export const STAGES = [
   "announced",
   "consultation",
@@ -20,6 +22,15 @@ export interface DiffusionStep {
   evidence: string;
   /** 官方文件或门户链接。 */
   url: string;
+  urlKind: SourceKind;
+  /** 页面自带的发布日期；门户可不填。 */
+  publishedAt?: string;
+  /** 本机打开并核对页面的日期。 */
+  retrievedAt: string;
+  /** 文号、法案号、案件号或咨询编号。 */
+  docNumber?: string;
+  /** 这条证据的边界，例如“报道页，原文未检索到”。 */
+  note?: string;
   confidence: Confidence;
   status: StepStatus;
 }

@@ -37,6 +37,7 @@ import {
   signpostHit,
   sourceReliability,
 } from "../data/chains";
+import { SOURCE_KIND_LABEL } from "../core/source";
 import { daysBetween, pct, signed, TODAY } from "../lib/format";
 
 export function Tip({
@@ -438,13 +439,28 @@ export function SourceMatrix({ chain }: { chain: Chain }) {
           tier: 5 as const,
           reliability: 60,
           latency: "—",
+          kind: "sample" as const,
         };
         return (
           <div className="srow" key={s.name}>
-            <Tip text={`Tier ${meta.tier} · 延迟 ${meta.latency}`}>
+            <Tip text={`Tier ${meta.tier} · 延迟 ${meta.latency} · ${SOURCE_KIND_LABEL[meta.kind]}`}>
               <span className={`stier t${meta.tier}`}>T{meta.tier}</span>
             </Tip>
-            <span className="sname">{s.name}</span>
+            {meta.url ? (
+              <a
+                className="sname"
+                href={meta.url}
+                target="_blank"
+                rel="noreferrer"
+                title={meta.dataset ?? meta.note}
+              >
+                {s.name} ↗
+              </a>
+            ) : (
+              <span className="sname" title={meta.note}>
+                {s.name}
+              </span>
+            )}
             <div className="sbar" aria-hidden="true">
               <i style={{ width: `${meta.reliability}%` }} />
             </div>

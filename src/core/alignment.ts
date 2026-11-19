@@ -1,3 +1,5 @@
+import type { SourceKind } from "./source";
+
 export type AlignmentStatus = "direct" | "convert" | "not_comparable";
 export type Region = "CN" | "US" | "EU";
 export type SourceTier = "T1" | "T2" | "T3";
@@ -8,8 +10,17 @@ export interface AlignmentSource {
   tier: SourceTier;
   value: string;
   period: string;
-  /** 官方门户或数据页；精确发布页仍待补时指向门户。 */
+  /** 官方发布页、数据集或文件；门户只能作为 urlKind="portal" 使用。 */
   url: string;
+  urlKind: SourceKind;
+  /** 页面自带的发布日期；门户可不填。 */
+  publishedAt?: string;
+  /** 本机打开并核对页面的日期，不是数据期间。 */
+  retrievedAt: string;
+  /** 数据集代码或表号。 */
+  dataset?: string;
+  /** 初值/终值、修订说明。 */
+  revision?: string;
   /** 这个地区实际统计的是什么。 */
   definition: string;
   note?: string;
@@ -73,6 +84,11 @@ export function alignmentVerdict(series: AlignmentSeries): {
 export function isFullySourced(series: AlignmentSeries): boolean {
   const regions = new Set(series.sources.map((source) => source.region));
   return series.sources.length === 3 && regions.size === 3;
+}
+
+/** 同一组里有多少条落在精确发布页/数据集/文件，而不是只有门户。 */
+export function preciseSourceCount(series: AlignmentSeries): number {
+  return series.sources.filter((source) => source.urlKind !== "portal").length;
 }
 
 export function alignmentSummary(series: readonly AlignmentSeries[]) {

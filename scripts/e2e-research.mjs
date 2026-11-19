@@ -42,7 +42,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const waitFor = async (expression, label, timeout = 12000) => {
   const start = Date.now();
   while (Date.now() - start < timeout) {
-    if (await js(expression)) return;
+    try {
+      if (await js(expression)) return;
+    } catch {
+      // 导航中 document.body 可能还没建好；继续等，不要伪装成断言失败。
+    }
     await sleep(120);
   }
   throw new Error(`timeout: ${label}`);
@@ -83,6 +87,8 @@ await waitFor(`document.body.innerText.includes("同一指标，三种口径")`,
 out.alignmentTabs = await js(`document.querySelectorAll(".align-tabs button").length`);
 out.alignmentRegions = await js(`document.querySelectorAll(".region-card").length`);
 out.alignmentStatus = await js(`document.querySelector(".align-question .pill")?.innerText`);
+out.sourceKindBadges = await js(`document.querySelectorAll(".region-card .chip.source-kind").length`);
+out.asOf = await js(`[...document.querySelectorAll(".region-card")].every(x => x.innerText.includes("抓取 2026-11-19"))`);
 await click(`[...document.querySelectorAll(".align-tabs button")].find(x => x.innerText.includes("房价"))`, 700);
 out.housePrice = await js(`document.body.innerText.includes("新建商品住宅") && document.body.innerText.includes("Case-Shiller")`);
 await shot("/tmp/causa-research-align.png");
@@ -95,6 +101,8 @@ out.stageNodes = await js(`document.querySelectorAll(".stage-node").length`);
 out.boardColumns = await js(`document.querySelectorAll(".diff-col").length`);
 await click(`[...document.querySelectorAll(".diff-cases button")].find(x => x.innerText.includes("转口"))`, 700);
 out.transshipment = await js(`document.body.innerText.includes("USTR") && document.body.innerText.includes("反规避")`);
+out.docNumbers = await js(`document.body.innerText.includes("91 FR 58247") && document.body.innerText.includes("2026/1840")`);
+out.diffAsOf = await js(`[...document.querySelectorAll(".diff-card")].every(x => x.innerText.includes("抓取 2026-11-19"))`);
 await shot("/tmp/causa-research-diff.png");
 
 // 相关链跳转

@@ -12,6 +12,7 @@ import {
 } from "./diffusion";
 import { DIFFUSION_CASES } from "../data/diffusion";
 import { initialChains } from "../data/chains";
+import { isPreciseKind } from "./source";
 
 const sample: DiffusionCase = {
   id: "sample",
@@ -28,6 +29,10 @@ const sample: DiffusionCase = {
       trigger: "宣布",
       evidence: "公告",
       url: "https://example.com/announcement",
+      urlKind: "document",
+      publishedAt: "2026-01-01",
+      retrievedAt: "2026-11-19",
+      docNumber: "示例公告 1 号",
       confidence: "high",
       status: "done",
     },
@@ -38,6 +43,10 @@ const sample: DiffusionCase = {
       trigger: "草案",
       evidence: "文件",
       url: "https://example.com/draft",
+      urlKind: "document",
+      publishedAt: "2026-02-01",
+      retrievedAt: "2026-11-19",
+      docNumber: "草案 2 号",
       confidence: "medium",
       status: "watching",
     },
@@ -48,6 +57,10 @@ const sample: DiffusionCase = {
       trigger: "听证",
       evidence: "议案",
       url: "https://example.com/bill",
+      urlKind: "document",
+      publishedAt: "2026-03-01",
+      retrievedAt: "2026-11-19",
+      docNumber: "H.R. 1",
       confidence: "low",
       status: "candidate",
     },
@@ -95,6 +108,27 @@ describe("政策扩散", () => {
         expect(step.url, `${item.id}/${step.region}`).toMatch(/^https?:\/\//);
       }
     }
+  });
+
+  it("每一步都标抓取日期与来源类型；精确文件必须有发布日", () => {
+    for (const item of DIFFUSION_CASES) {
+      for (const step of item.steps) {
+        const where = `${item.id}/${step.region}`;
+        expect(step.retrievedAt, where).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        expect(["release", "document", "portal"], where).toContain(step.urlKind);
+        if (isPreciseKind(step.urlKind)) {
+          expect(step.publishedAt, `${where} 缺发布日`).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+          expect(step.publishedAt! <= step.retrievedAt, `${where} 发布晚于抓取`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("13 步里至少 12 步落到发布页或文件，且至少 10 步有文号", () => {
+    const steps = DIFFUSION_CASES.flatMap((item) => item.steps);
+    expect(steps).toHaveLength(13);
+    expect(steps.filter((step) => isPreciseKind(step.urlKind)).length).toBeGreaterThanOrEqual(12);
+    expect(steps.filter((step) => Boolean(step.docNumber)).length).toBeGreaterThanOrEqual(10);
   });
 
   it("演示数据有 3 个案例，且关联的 chain 都存在", () => {
