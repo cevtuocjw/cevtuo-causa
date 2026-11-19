@@ -8,6 +8,29 @@ export interface VaultStatus {
   schema_version: number;
 }
 
+export interface VaultFailure {
+  kind: string;
+  message: string;
+  detail: string;
+  db_path: string;
+  backup_dir: string;
+  db_exists: boolean;
+}
+
+export interface BackupInfo {
+  name: string;
+  path: string;
+  bytes: number;
+  modified: number;
+}
+
+export interface DestroyReport {
+  db_removed: boolean;
+  backups_removed: boolean;
+  key_removed: boolean;
+  errors: string[];
+}
+
 export function isDesktop(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
@@ -87,4 +110,47 @@ export async function vaultStatus(): Promise<VaultStatus | null> {
     console.error("vault_status failed", err);
     return null;
   }
+}
+
+/** 初始化失败时的分类信息；成功启动返回 null。 */
+export async function vaultFailure(): Promise<VaultFailure | null> {
+  if (!isDesktop()) return null;
+  try {
+    return await invoke<VaultFailure | null>("vault_failure");
+  } catch (err) {
+    console.error("vault_failure failed", err);
+    return null;
+  }
+}
+
+/** 重新走完整初始化；不会在数据库存在时新建密钥。 */
+export async function retryVault(): Promise<VaultStatus> {
+  return await invoke<VaultStatus>("retry_vault");
+}
+
+export async function listBackups(): Promise<BackupInfo[]> {
+  if (!isDesktop()) return [];
+  return await invoke<BackupInfo[]>("list_backups");
+}
+
+export async function restoreBackup(name: string): Promise<VaultStatus> {
+  return await invoke<VaultStatus>("restore_backup", { name });
+}
+
+export async function revealDataDir(): Promise<void> {
+  if (!isDesktop()) return;
+  await invoke("reveal_data_dir");
+}
+
+/** 加密擦除：删备份、数据库与 Keychain 密钥。短语由 Rust 侧再次校验。 */
+export async function destroyLocalData(confirm: string): Promise<DestroyReport> {
+  if (!isDesktop()) {
+    throw new Error("浏览器预览没有本地数据库可销毁。");
+  }
+  return await invoke<DestroyReport>("destroy_local_data", { confirm });
+}
+
+export async function quitApp(): Promise<void> {
+  if (!isDesktop()) return;
+  await invoke("quit_app");
 }

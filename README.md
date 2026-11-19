@@ -2,13 +2,13 @@
 
 本地优先的因果账本：记录经济推断，到期结算，再投影到每个人的坐标。
 
-**0.2 版**：Fey 风格重构，50 项参考能力落地，量化面板与更新节奏，支付直连决策。
-macOS 原生壳（Tauri 2 + SQLCipher + Keychain）已构建并验证：数据库文件头是密文、密钥在 Keychain、
-判定在退出重开后仍然保留。Android 尚未构建。
+**0.4 版**：在 0.3 的账本闭环之上，加入加密擦除、Keychain 异常恢复、备份恢复与
+按类别校准。macOS 原生壳（Tauri 2 + SQLCipher + Keychain）已构建：
+数据库文件头是密文、密钥在 Keychain、判定在退出重开后仍然保留。Android 尚未构建。
 
 ## 下载
 
-从 GitHub Releases 下载 `Cevtuo-Causa-0.2.0-macos-universal.dmg` 或 `.zip`，校验 `SHA256SUMS.txt`。
+从 GitHub Releases 下载 `Cevtuo-Causa-0.4.0-macos-universal.dmg` 或 `.zip`，校验 `SHA256SUMS.txt`。
 
 **没有 Apple Developer 账号，包未签名、未公证**：首次打开需要在系统设置里放行。
 完整步骤、卸载与数据位置见 [DISTRIBUTION.md](DISTRIBUTION.md)。

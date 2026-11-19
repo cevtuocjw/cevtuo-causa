@@ -51,9 +51,14 @@ cat > "$OUT/RELEASE-NOTES.md" <<NOTES
 - dmg: \`$NAME.dmg\`（如果存在）
 - 校验: \`SHA256SUMS.txt\`
 
-本版新增：新建/编辑链条、到期结算纪律（反事实优先、必须写理由、10 秒撤销）、
-校准 10 档与 90 天窗口、家庭暴露投影、CSV 逐笔复核、JSON 恢复、加密自动备份。
+本版新增：
+- 加密擦除：设置里“销毁本地数据”会删备份、数据库与 Keychain 密钥，并要求先导出 JSON、输入确认短语。
+- Keychain 异常恢复：区分缺密钥 / 钥匙串锁定 / 权限拒绝 / 密钥不匹配；不会新建密钥覆盖旧库，可从加密备份恢复。
+- 校准按标签筛选（宏观 / 政策 / 行业 / 个人等），样本不足 10 条仍只记录不结论。
+- 数据库结构版本改用 PRAGMA user_version；备份恢复前保留一份 before-restore 副本。
+
 数据只在本机：SQLCipher 加密数据库 + macOS Keychain 密钥；应用不发网络请求。
+未签名、未公证；首次打开需要手动放行，步骤见 DISTRIBUTION.md。
 NOTES
 
 ls -lh "$OUT"

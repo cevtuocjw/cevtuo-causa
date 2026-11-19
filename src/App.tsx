@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   Activity,
   Clock,
+  DatabaseZap,
   Download,
   FileText,
   Gauge,
@@ -27,6 +28,8 @@ import { BillReviewDialog } from "./components/BillReviewDialog";
 import { ChainEditor } from "./components/ChainEditor";
 import { SettleDialog } from "./components/SettleDialog";
 import { FirstRunDialog } from "./components/FirstRunDialog";
+import { DestroyDataDialog } from "./components/DestroyDataDialog";
+import { VaultRecovery } from "./components/VaultRecovery";
 import { IconRail, TopBar, type View } from "./components/Shell";
 import {
   BriefingStrip,
@@ -70,6 +73,7 @@ import {
   ece as eceOf,
   eligibleRecords,
   hitRate,
+  recordsForTag,
 } from "./core/stats";
 import { migrateV1, parseStateJson } from "./core/migrate";
 import { projectExposure } from "./core/exposure";
@@ -86,8 +90,10 @@ import {
   loadState,
   saveExport,
   saveState,
+  vaultFailure,
   vaultStatus,
   type AuditRow,
+  type VaultFailure,
   type VaultStatus,
 } from "./lib/desktop";
 
@@ -168,6 +174,7 @@ export default function App() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [firstRun, setFirstRun] = useState(false);
   const [statsWindow, setStatsWindow] = useState<"all" | "90d">("all");
+  const [statsTag, setStatsTag] = useState("all");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteSeed, setPaletteSeed] = useState<string | undefined>();
   const [toast, setToast] = useState<{
@@ -186,7 +193,9 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [auditRows, setAuditRows] = useState<AuditRow[]>([]);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [destroyOpen, setDestroyOpen] = useState(false);
   const [vault, setVault] = useState<VaultStatus | null>(null);
+  const [vaultFault, setVaultFault] = useState<VaultFailure | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorSeed, setEditorSeed] = useState<CoreChain | undefined>();
   const [settleTarget, setSettleTarget] = useState<{
@@ -228,6 +237,36 @@ export default function App() {
   const buckets = calibration(state.records, statsOptions);
   const brier = brierOf(statRecords);
   const eceValue = eceOf(statRecords);
+
+  const statsTags = useMemo(() => {
+    const tags = new Set<string>();
+    for (const chain of state.chains) {
+      for (const tag of chain.tags) {
+        const trimmed = tag.trim();
+        if (trimmed) tags.add(trimmed);
+      }
+    }
+    return [...tags].sort((a, b) => a.localeCompare(b, "zh-CN"));
+  }, [state.chains]);
+
+  const calibRecords = useMemo(
+    () =>
+      eligibleRecords(
+        recordsForTag(state.records, state.chains, statsTag),
+        statsOptions,
+      ),
+    [state.records, state.chains, statsTag, statsOptions],
+  );
+  const calibBuckets = useMemo(
+    () =>
+      calibration(
+        recordsForTag(state.records, state.chains, statsTag),
+        statsOptions,
+      ),
+    [state.records, state.chains, statsTag, statsOptions],
+  );
+  const calibSampleSize = calibRecords.length;
+  const calibRecordRows = [...calibRecords].slice(-8).reverse();
   const live = chains.filter((c) => c.status !== "settled");
   const due = live.filter((c) => c.status === "due");
   const visible = live;
@@ -273,10 +312,9 @@ export default function App() {
     return base.slice(0, 3);
   }, [active, visible]);
 
-  const recordRows = [...statRecords].slice(-8).reverse();
-
   useEffect(() => {
     let alive = true;
+    let failed = false;
     (async () => {
       try {
         const saved = await loadState<unknown>();
@@ -303,11 +341,20 @@ export default function App() {
           }
         }
       } catch (err) {
+        failed = true;
         if (alive) setLoadError(String(err));
+        // 读取失败可能发生在初始化之前（库打不开），此时 load_state 的错误比较笼统；
+        // 再取一次分类信息，恢复页才能给出“缺密钥 / 钥匙串锁 / 密钥不匹配”。
+        const [fault, status] = await Promise.all([vaultFailure(), vaultStatus()]);
+        if (alive) {
+          setVaultFault(fault);
+          if (status) setVault(status);
+        }
       } finally {
         if (alive) {
           setLoaded(true);
-          if (isDesktop()) {
+          // 读失败时不要自动备份：连接可能根本不存在，而且失败状态不该再写盘。
+          if (isDesktop() && !failed) {
             void backupDb(`auto-${new Date().toISOString().slice(0, 10)}`).catch(
               (err) => console.error("auto backup failed", err),
             );
@@ -441,15 +488,17 @@ export default function App() {
     return { json, md, stamp };
   }
 
-  async function doExport(kind: "json" | "md") {
+  async function doExport(kind: "json" | "md"): Promise<string | null> {
     const { json, md, stamp } = buildExport();
     const name = `cevtuo-causa-${stamp}.${kind}`;
     try {
       const saved = await saveExport(name, kind === "json" ? json : md);
       setToast({ message: `已导出 ${kind.toUpperCase()}：${saved}` });
       void appendAudit("export", `${kind.toUpperCase()} · ${saved}`);
+      return saved;
     } catch (err) {
       setToast({ message: `导出失败：${String(err)}` });
+      return null;
     }
   }
 
@@ -1080,20 +1129,48 @@ export default function App() {
                           最近 90 天
                         </button>
                       </span>
-                      <span className="count num">{sampleSize} 条</span>
+                      <span className="count num">{calibSampleSize} 条</span>
                     </div>
+                    {statsTags.length > 0 ? (
+                      <div
+                        className="calib-tags"
+                        role="group"
+                        aria-label="按类别筛选"
+                      >
+                        <button
+                          type="button"
+                          className={statsTag === "all" ? "active" : ""}
+                          onClick={() => setStatsTag("all")}
+                        >
+                          全部类别
+                        </button>
+                        {statsTags.map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            className={statsTag === tag ? "active" : ""}
+                            onClick={() => setStatsTag(tag)}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
                     <div className="calib-wrap" style={{ maxWidth: 680 }}>
-                      <CalibrationChart buckets={buckets} />
+                      <CalibrationChart buckets={calibBuckets} />
                     </div>
-                    {sampleSize > 0 && sampleSize < 10 ? (
+                    {calibSampleSize > 0 && calibSampleSize < 10 ? (
                       <p className="settle-note" style={{ padding: "0 20px 14px" }}>
                         样本不足 10 条，曲线只作记录，暂不当作结论。
+                        {statsTag !== "all" ? `（类别：${statsTag}）` : ""}
                       </p>
                     ) : null}
-                    {sampleSize === 0 && state.records.length > 0 ? (
+                    {calibSampleSize === 0 && state.records.length > 0 ? (
                       <p className="settle-note" style={{ padding: "0 20px 14px" }}>
-                        当前只统计你自己的判定；演示 / 迁移记录未计入。
-                        可在设置里打开“包含演示记录”查看它们。
+                        {statsTag !== "all"
+                          ? `类别“${statsTag}”还没有可统计的判定；` +
+                            "类别按链条标签关联，迁移记录没有链条不会命中。"
+                          : "当前只统计你自己的判定；演示 / 迁移记录未计入。可在设置里打开“包含演示记录”查看它们。"}
                       </p>
                     ) : null}
                   </section>
@@ -1113,7 +1190,7 @@ export default function App() {
                           </tr>
                         </thead>
                         <tbody>
-                          {buckets.map((b) => (
+                          {calibBuckets.map((b) => (
                             <tr key={b.label}>
                               <th scope="row">{b.label}%</th>
                               <td className="num">{b.count}</td>
@@ -1132,9 +1209,9 @@ export default function App() {
                   <section className="card">
                     <div className="card-head">
                       <h2 className="card-title">最近结算</h2>
-                      <span className="count num">n={sampleSize}</span>
+                      <span className="count num">n={calibSampleSize}</span>
                     </div>
-                    {recordRows.map((r, i) => (
+                    {calibRecordRows.map((r, i) => (
                       <div className="source-row" key={`${r.confidence}-${i}`}>
                         <div>
                           <div className="source-name">
@@ -1464,7 +1541,7 @@ export default function App() {
                 <h2>
                   <Settings size={16} /> 设置
                 </h2>
-                <span className="pill">0.3.0</span>
+                <span className="pill">0.4.0</span>
               </div>
               <div className="dialog-rows">
                 <div>
@@ -1573,6 +1650,18 @@ export default function App() {
                     >
                       <ShieldCheck size={14} /> 立即备份
                     </button>
+                    {isDesktop() ? (
+                      <button
+                        type="button"
+                        className="btn btn-destructive-ghost"
+                        onClick={() => {
+                          setConfirmReset(false);
+                          setDestroyOpen(true);
+                        }}
+                      >
+                        <DatabaseZap size={14} /> 销毁本地数据
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className="btn"
@@ -1699,29 +1788,18 @@ export default function App() {
       />
 
       {loadError ? (
-        <div className="fatal-overlay" role="alertdialog" aria-label="载入失败">
-          <div className="dialog glass">
-            <div className="dialog-head">
-              <h2>无法读取本地账本</h2>
-              <span className="pill stale">未写入</span>
-            </div>
-            <p className="dialog-lead">
-              读取失败时应用不会写入默认值，避免覆盖你的数据。请重试；如果持续失败，
-              先备份数据库文件再处理。
-            </p>
-            <p className="dialog-lead"><code>{loadError}</code></p>
-            <div className="dialog-actions">
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => window.location.reload()}
-              >
-                重试
-              </button>
-            </div>
-          </div>
-        </div>
+        <VaultRecovery
+          loadError={loadError}
+          failure={vaultFault}
+          status={vault}
+        />
       ) : null}
+
+      <DestroyDataDialog
+        open={destroyOpen}
+        onClose={() => setDestroyOpen(false)}
+        onExport={() => doExport("json")}
+      />
 
       {saveError ? (
         <div className="save-banner" role="alert">

@@ -6,6 +6,32 @@ export interface StatRecord {
   origin?: "user" | "seed" | "legacy";
   settledAt?: string;
   voidedAt?: string;
+  /** 类别筛选通过它关联链条标签；迁移记录没有 chainId。 */
+  chainId?: string;
+}
+
+export interface TaggedChain {
+  id: string;
+  tags: readonly string[];
+}
+
+/**
+ * 按链条标签筛选记录。传 null / "all" 表示不筛选。
+ * 迁移记录的 chainId 为空，不会命中任何类别；这是有意的——
+ * 没有链条就没有可归属的类别，不能把它们硬塞进某一类。
+ */
+export function recordsForTag<T extends StatRecord>(
+  records: readonly T[],
+  chains: readonly TaggedChain[],
+  tag: string | null,
+): readonly T[] {
+  if (tag == null || tag === "all") return records;
+  const ids = new Set(
+    chains.filter((chain) => chain.tags.includes(tag)).map((chain) => chain.id),
+  );
+  return records.filter(
+    (record) => record.chainId != null && ids.has(record.chainId),
+  );
 }
 
 export interface StatsOptions {

@@ -1727,9 +1727,185 @@ h1 {
 
 .dialog-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
   margin-top: 16px;
+}
+
+/* ---------------------------------------------------- destroy / recovery */
+
+.btn-destructive,
+.btn-destructive-ghost {
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ffb4b4;
+}
+
+.btn-destructive {
+  background: rgba(239, 68, 68, 0.16);
+}
+
+.btn-destructive:hover,
+.btn-destructive-ghost:hover {
+  background: rgba(239, 68, 68, 0.24);
+  border-color: rgba(239, 68, 68, 0.8);
+}
+
+.btn-destructive:disabled {
+  opacity: 0.38;
+}
+
+.destroy-dialog {
+  width: min(620px, 100%);
+}
+
+.destroy-export {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+}
+
+.destroy-export div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.destroy-export span,
+.destroy-phrase span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.destroy-export b {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.destroy-phrase {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.destroy-phrase code {
+  color: var(--negative);
+}
+
+.destroy-phrase input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--control);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.destroy-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--negative);
+}
+
+.destroy-errors {
+  margin: 10px 0 0;
+  padding-left: 16px;
+  font-size: 11px;
+  color: var(--negative);
+  line-height: 1.6;
+}
+
+.recovery-panel {
+  width: min(720px, 100%);
+  max-height: 88vh;
+  overflow: auto;
+}
+
+.recovery-detail code {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--faint);
+}
+
+.recovery-paths div {
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.mono-path {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  overflow-wrap: anywhere;
+}
+
+.recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.backup-block {
+  margin-top: 16px;
+  border-top: 1px solid var(--rule);
+  padding-top: 12px;
+}
+
+.backup-list {
+  max-height: 190px;
+  overflow: auto;
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.backup-list li {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 11px;
+}
+
+.backup-name {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.backup-confirm {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.btn-mini.danger {
+  border-color: rgba(239, 68, 68, 0.55);
+  color: #ffb4b4;
+}
+
+.recovery-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--accent);
 }
 
 .household-form {
@@ -2694,6 +2870,33 @@ h1 {
 
 .seg button.active {
   background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.calib-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 20px 4px;
+}
+
+.calib-tags button {
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--control);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.calib-tags button:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.calib-tags button.active {
+  background: var(--accent-soft);
+  border-color: transparent;
   color: var(--accent);
 }
 

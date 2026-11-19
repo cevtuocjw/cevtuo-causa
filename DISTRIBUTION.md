@@ -1,6 +1,6 @@
 # 分发：没有 Apple Developer 账号怎么发
 
-更新时间：2026-11-18 · 版本 0.3.0
+更新时间：2026-11-19 · 版本 0.4.0
 
 ## 决定
 
@@ -29,7 +29,7 @@
 
 ### 方式 A：DMG（推荐）
 
-1. 下载 `Cevtuo-Causa-0.3.0-macos-universal.dmg`；
+1. 下载 `Cevtuo-Causa-0.4.0-macos-universal.dmg`；
 2. 打开，把 `Cevtuo Causa` 拖进 `Applications`；
 3. 第一次打开被拦下后：
    - **macOS 15 Sequoia 及更新**：系统设置 → 隐私与安全性 → 拉到底 → “仍要打开”；
@@ -47,7 +47,7 @@
 ### 校验下载
 
 ```bash
-shasum -a 256 Cevtuo-Causa-0.3.0-macos-universal.dmg
+shasum -a 256 Cevtuo-Causa-0.4.0-macos-universal.dmg
 # 与 release 页里的 SHA256SUMS.txt 对照
 ```
 
@@ -55,8 +55,10 @@ shasum -a 256 Cevtuo-Causa-0.3.0-macos-universal.dmg
 
 - 数据：`~/Library/Application Support/com.cevtuo.causa/causa.db`（SQLCipher 加密）
 - 密钥：钥匙串条目 `com.cevtuo.causa / db-key`
-- 卸载：删 App；要彻底清掉数据，再删上面的数据库文件与钥匙串条目：
+- 卸载：先在设置里点“销毁本地数据”（会删数据库、备份和钥匙串密钥），再删 App。
+  如果 App 已删、只剩数据，可手动清理：
   ```bash
+  rm -rf "$HOME/Library/Application Support/com.cevtuo.causa"
   security delete-generic-password -s com.cevtuo.causa -a db-key
   ```
 
@@ -76,25 +78,33 @@ bash scripts/release.sh
 产物在 `release/`：
 
 ```
-Cevtuo-Causa-0.3.0-macos-universal.dmg   12,828,458 bytes
-Cevtuo-Causa-0.3.0-macos-universal.zip   12,457,629 bytes
+Cevtuo-Causa-0.4.0-macos-universal.dmg   12,905,193 bytes
+Cevtuo-Causa-0.4.0-macos-universal.zip   12,525,045 bytes
 SHA256SUMS.txt
 ```
 
-### 当前产物的校验和（2026-11-18 16:29 重建）
+### 当前产物的校验和（2026-11-19 10:15 重建）
 
-0.3.0 包含：链条编辑、结算纪律（反事实 / 理由 / 10 秒撤销）、10 档校准与 90 天窗口、
-家庭暴露投影、CSV 逐笔复核、JSON 恢复、加密自动备份、明文库拒绝启动。
-已在 Apple Silicon 上启动 universal release 包，并验证设置页、审计与备份入口。
+0.4.0 包含：0.3 的全部功能，加上加密擦除（删数据库 / 备份 / Keychain 密钥）、
+Keychain 异常恢复（缺密钥 / 锁定 / 权限拒绝 / 密钥不匹配）、备份恢复、
+校准按标签筛选、SQLite `user_version` 结构版本。
+
+验证记录（2026-11-19）：
+- Apple Silicon：release 包启动、演示库加载、设置页 0.4.0、手动加密备份通过。
+- x86_64 slice：用 `arch -x86_64` 在 Rosetta 下启动，`vmmap` 显示
+  `Code Type: X86-64 (translated)`，界面与数据库读取正常。**不是 Intel 真机**。
+- Gatekeeper：`spctl --assess` 显示 `accepted`，但同时打印
+  `override=security disabled`；本机 Gatekeeper 关闭，**不能**证明下载用户能打开。
+- 签名：`Signature=adhoc`，`TeamIdentifier=not set`。
 
 ```
-eb34797f17f6636e7669e0b2ad6e80ea4710b96902f5596988d777f5272be46a  Cevtuo-Causa-0.3.0-macos-universal.zip
-4552bfc70beca16199f8d3a062e143286a18272be9f3077e3d0ada8eb5ae4a9f  Cevtuo-Causa-0.3.0-macos-universal.dmg
+a32f5c15784feb75d89bc70395e628b09a339a83ec81db0624b912b0cba254e8  Cevtuo-Causa-0.4.0-macos-universal.zip
+633d8ab13d554b4a8b4f61cc6823df3908b4ba664e9194fd7d4b0b7747ef6624  Cevtuo-Causa-0.4.0-macos-universal.dmg
 ```
 
 验证方式：`shasum -a 256 -c SHA256SUMS.txt`（在 `release/` 目录内执行）。
 
-仓库已初始化（本地 git，tag `v0.3.0`），尚未配置远程：
+仓库已初始化（本地 git，0.4 代码尚未提交/tag，最近 tag 为 `v0.3.0`），尚未配置远程：
 
 ```bash
 cd ~/Documents/Codex/cevtuo-causa
@@ -104,8 +114,8 @@ gh repo create cevtuo-causa --public --source=. --remote=origin --push
 发布到 GitHub：
 
 ```bash
-gh release create v0.3.0 release/* \
-  --title "Cevtuo Causa 0.3.0" \
+gh release create v0.4.0 release/* \
+  --title "Cevtuo Causa 0.4.0" \
   --notes-file release/RELEASE-NOTES.md
 ```
 

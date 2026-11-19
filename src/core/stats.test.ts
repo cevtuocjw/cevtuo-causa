@@ -7,6 +7,7 @@ import {
   ece,
   eligibleRecords,
   hitRate,
+  recordsForTag,
 } from "./stats";
 
 const records: StatRecord[] = [
@@ -97,5 +98,38 @@ describe("stats 时间窗", () => {
 
   it("不传 since 时保留全部用户记录", () => {
     expect(eligibleRecords(dated)).toHaveLength(3);
+  });
+});
+
+describe("stats 类别筛选", () => {
+  const chains = [
+    { id: "macro", tags: ["宏观", "房租"] },
+    { id: "policy", tags: ["政策"] },
+    { id: "industry", tags: ["行业", "宏观"] },
+  ];
+  const tagged: StatRecord[] = [
+    { confidence: 0.6, outcome: "hit", origin: "user", chainId: "macro" },
+    { confidence: 0.7, outcome: "miss", origin: "user", chainId: "policy" },
+    { confidence: 0.8, outcome: "hit", origin: "user", chainId: "industry" },
+    { confidence: 0.5, outcome: "hit", origin: "user", chainId: "" },
+  ];
+
+  it("按标签关联到链条；迁移记录 chainId 为空不命中", () => {
+    expect(recordsForTag(tagged, chains, "宏观")).toHaveLength(2);
+    expect(recordsForTag(tagged, chains, "政策")).toHaveLength(1);
+    expect(recordsForTag(tagged, chains, "个人")).toHaveLength(0);
+  });
+
+  it("null / all 不筛选", () => {
+    expect(recordsForTag(tagged, chains, null)).toHaveLength(4);
+    expect(recordsForTag(tagged, chains, "all")).toHaveLength(4);
+  });
+
+  it("类别筛选后仍走 eligibleRecords 的时间窗与作废过滤", () => {
+    const rows = recordsForTag(tagged, chains, "宏观");
+    const filtered = eligibleRecords(rows, {
+      since: new Date("2026-01-01T00:00:00Z"),
+    });
+    expect(filtered).toHaveLength(0); // 没有 settledAt，时间窗会排除
   });
 });
